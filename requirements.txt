@@ -1,0 +1,11 @@
+tkinter
+pandas
+Pillow
+pyperclip
+openpyxl
+matplotlib
+piexif
+geopy
+numpy
+opencv-python
+send2trash
