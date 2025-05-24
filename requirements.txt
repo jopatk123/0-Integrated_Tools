@@ -9,3 +9,4 @@ geopy
 numpy
 opencv-python
 send2trash
+requests

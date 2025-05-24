@@ -1,0 +1,745 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import requests
+import json
+import math
+import tkinter as tk
+from tkinter import ttk, filedialog, messagebox
+import openpyxl # For Excel export
+import requests.utils # For URL encoding
+import xml.etree.ElementTree as ET # For KML parsing/generation
+from xml.dom.minidom import parseString # For pretty KML output
+
+# 高德Web服务API Key，用户需要替换为自己的Key
+AMAP_API_KEY = "7a54ad9541e0106cba1557c1686d00d2" 
+
+# --- 坐标转换函数 (WGS-84 <-> GCJ-02) ---
+x_pi = 3.14159265358979324 * 3000.0 / 180.0
+pi = 3.1415926535897932384626  # π
+a = 6378245.0  # 长半轴
+ee = 0.00669342162296594323  # 扁率
+
+def _transform_lat(lng, lat):
+    ret = -100.0 + 2.0 * lng + 3.0 * lat + 0.2 * lat * lat + \
+          0.1 * lng * lat + 0.2 * math.sqrt(math.fabs(lng))
+    ret += (20.0 * math.sin(6.0 * lng * pi) + 20.0 *
+            math.sin(2.0 * lng * pi)) * 2.0 / 3.0
+    ret += (20.0 * math.sin(lat * pi) + 40.0 *
+            math.sin(lat / 3.0 * pi)) * 2.0 / 3.0
+    ret += (160.0 * math.sin(lat / 12.0 * pi) + 320 *
+            math.sin(lat * pi / 30.0)) * 2.0 / 3.0
+    return ret
+
+def _transform_lng(lng, lat):
+    ret = 300.0 + lng + 2.0 * lat + 0.1 * lng * lng + \
+          0.1 * lng * lat + 0.1 * math.sqrt(math.fabs(lng))
+    ret += (20.0 * math.sin(6.0 * lng * pi) + 20.0 *
+            math.sin(2.0 * lng * pi)) * 2.0 / 3.0
+    ret += (20.0 * math.sin(lng * pi) + 40.0 *
+            math.sin(lng / 3.0 * pi)) * 2.0 / 3.0
+    ret += (150.0 * math.sin(lng / 12.0 * pi) + 300.0 *
+            math.sin(lng / 30.0 * pi)) * 2.0 / 3.0
+    return ret
+
+def wgs84_to_gcj02(lng_wgs, lat_wgs):
+    """WGS84坐标系转GCJ02坐标系（高德、谷歌中国等）"""
+    if not (73.66 < lng_wgs < 135.05 and 3.86 < lat_wgs < 53.55):
+        # print("坐标超出中国范围，不进行转换")
+        return lng_wgs, lat_wgs
+    dlat = _transform_lat(lng_wgs - 105.0, lat_wgs - 35.0)
+    dlng = _transform_lng(lng_wgs - 105.0, lat_wgs - 35.0)
+    radlat = lat_wgs / 180.0 * pi
+    magic = math.sin(radlat)
+    magic = 1 - ee * magic * magic
+    sqrtmagic = math.sqrt(magic)
+    dlat = (dlat * 180.0) / ((a * (1 - ee)) / (magic * sqrtmagic) * pi)
+    dlng = (dlng * 180.0) / (a / sqrtmagic * math.cos(radlat) * pi)
+    mglat = lat_wgs + dlat
+    mglng = lng_wgs + dlng
+    return mglng, mglat
+
+def gcj02_to_wgs84(lng_gcj, lat_gcj):
+    """GCJ02坐标系转WGS84坐标系"""
+    if not (73.66 < lng_gcj < 135.05 and 3.86 < lat_gcj < 53.55):
+        # print("坐标超出中国范围，不进行转换")
+        return lng_gcj, lat_gcj
+    # dlat = _transform_lat(lng_gcj - 105.0, lat_gcj - 35.0)
+    # dlng = _transform_lng(lng_gcj - 105.0, lat_gcj - 35.0)
+    # radlat = lat_gcj / 180.0 * pi
+    # magic = math.sin(radlat)
+    # magic = 1 - ee * magic * magic
+    # sqrtmagic = math.sqrt(magic)
+    # dlat = (dlat * 180.0) / ((a * (1 - ee)) / (magic * sqrtmagic) * pi)
+    # dlng = (dlng * 180.0) / (a / sqrtmagic * math.cos(radlat) * pi)
+    # lng_wgs = lng_gcj - dlng
+    # lat_wgs = lat_gcj - dlat
+    # return lng_wgs, lat_wgs
+    # Corrected GCJ02 to WGS84 conversion
+    # The original implementation was an approximation. A more accurate way is iterative or using the reverse calculation based on wgs84_to_gcj02
+    # For simplicity and common practice, many implementations use a delta method:
+    mglng, mglat = wgs84_to_gcj02(lng_gcj, lat_gcj) # Estimate WGS84 by assuming input is WGS84 and see what GCJ02 it produces
+    lng_wgs = lng_gcj * 2 - mglng
+    lat_wgs = lat_gcj * 2 - mglat
+    return lng_wgs, lat_wgs
+
+# --- 高德API调用函数 ---
+def get_address_from_amap(lon_wgs, lat_wgs, api_key):
+    """使用高德逆地理编码API获取地址信息 (输入WGS-84, API使用GCJ-02)"""
+    if api_key == "YOUR_AMAP_API_KEY_HERE" or not api_key:
+        return "错误：请在脚本中配置您的高德API Key"
+    lon_gcj, lat_gcj = wgs84_to_gcj02(lon_wgs, lat_wgs)
+    url = f"https://restapi.amap.com/v3/geocode/regeo?output=json&location={lon_gcj},{lat_gcj}&key={api_key}&radius=1000&extensions=base"
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status() # 如果请求失败则抛出HTTPError
+        data = response.json()
+        if data.get("status") == "1" and data.get("regeocode"):
+            return data["regeocode"].get("formatted_address", "地址未找到")
+        else:
+            return f"高德API错误: {data.get('info', '未知错误')}"
+    except requests.exceptions.RequestException as e:
+        return f"网络请求错误: {e}"
+    except json.JSONDecodeError:
+        return "解析高德API响应失败"
+
+def get_coords_from_amap(address, city, api_key):
+    """使用高德地理编码API获取经纬度信息 (返回WGS-84)"""
+    if api_key == "YOUR_AMAP_API_KEY_HERE" or not api_key:
+        return "错误：请在脚本中配置您的高德API Key", None, None
+    url = f"https://restapi.amap.com/v3/geocode/geo?address={requests.utils.quote(address)}&city={requests.utils.quote(city)}&output=json&key={api_key}"
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        if data.get("status") == "1" and data.get("geocodes"):
+            location_gcj_str = data["geocodes"][0].get("location")
+            if location_gcj_str:
+                lon_gcj_str, lat_gcj_str = location_gcj_str.split(',')
+                lon_wgs, lat_wgs = gcj02_to_wgs84(float(lon_gcj_str), float(lat_gcj_str))
+                return None, lon_wgs, lat_wgs
+            else:
+                return "未找到经纬度", None, None
+        else:
+            return f"高德API错误: {data.get('info', '未知错误')}", None, None
+    except requests.exceptions.RequestException as e:
+        return f"网络请求错误: {e}", None, None
+    except (json.JSONDecodeError, IndexError):
+        return "解析高德API响应或数据格式错误", None, None
+
+
+def search_nearby_pois_amap(lon_wgs, lat_wgs, radius_meters, api_key, search_keywords, search_types=""):
+    """使用高德周边搜索API查找POI (输入WGS-84, API使用GCJ-02, 输出WGS-84)"""
+    if api_key == "YOUR_AMAP_API_KEY_HERE" or not api_key:
+        return "错误：请在脚本中配置您的高德API Key", []
+    
+    lon_gcj, lat_gcj = wgs84_to_gcj02(lon_wgs, lat_wgs)
+
+    url_params = {
+        "key": api_key,
+        "location": f"{lon_gcj},{lat_gcj}",
+        "keywords": search_keywords,
+        "radius": str(radius_meters),
+        "offset": "25",
+        "page": "1",
+        "output": "json"
+    }
+    if search_types:
+        url_params["types"] = search_types
+    
+    base_url = "https://restapi.amap.com/v3/place/around"
+    query_string_parts = []
+    for k, v in url_params.items():
+        if v: # Only add if value is not empty or None
+            query_string_parts.append(f"{k}={requests.utils.quote(str(v))}")
+
+    url = f"{base_url}?{'&'.join(query_string_parts)}"
+    
+    pois = []
+    response_text = "N/A"
+    try:
+        response = requests.get(url, timeout=10)
+        response_text = response.text
+        response.raise_for_status()
+        data = response.json()
+        
+        if data.get("status") == "1":
+            if "pois" in data and data["pois"]:
+                for poi_data in data["pois"]:
+                    name = poi_data.get("name")
+                    location_gcj_str = poi_data.get("location")
+                    if name and location_gcj_str:
+                        gcj_lon_str, gcj_lat_str = location_gcj_str.split(',')
+                        wgs_lon, wgs_lat = gcj02_to_wgs84(float(gcj_lon_str), float(gcj_lat_str))
+                        pois.append({
+                            "name": name,
+                            "wgs84_lon": wgs_lon,
+                            "wgs84_lat": wgs_lat,
+                            "gcj02_location_from_amap": location_gcj_str
+                        })
+                return None, pois
+            else:
+                return "未找到符合条件的POI", [] 
+        else:
+            return f"高德API错误: {data.get('info', '未知错误')} (infocode: {data.get('infocode')})", []
+            
+    except requests.exceptions.RequestException as e:
+        return f"网络请求错误: {e}", []
+    except json.JSONDecodeError:
+        return f"解析高德API响应失败. URL: {url}, Response: {response_text}", []
+    except Exception as e:
+        return f"处理POI数据时发生未知错误: {e}", []
+
+# --- KML Helper Functions ---
+def create_kml_placemark(name, lon, lat, description=""):
+    placemark = ET.Element("Placemark")
+    ET.SubElement(placemark, "name").text = name
+    if description:
+        ET.SubElement(placemark, "description").text = description
+    point = ET.SubElement(placemark, "Point")
+    ET.SubElement(point, "coordinates").text = f"{lon},{lat},0"
+    return placemark
+
+def pretty_print_xml(xml_string):
+    parsed_string = parseString(xml_string)
+    return parsed_string.toprettyxml(indent="  ")
+
+# --- GUI 主逻辑 ---
+class GeoSpatialApp:
+    def __init__(self, master):
+        self.master = master
+        # master.title("地理空间工具集") # Updated title - Removed, as Frame doesn't have title
+        # master.geometry("800x700") # Adjusted initial size - Removed, as Frame doesn't have geometry
+
+        # API Key Check
+        if AMAP_API_KEY == "YOUR_AMAP_API_KEY_HERE" or not AMAP_API_KEY:
+            messagebox.showwarning("API Key未配置", 
+                                 "请打开 geospatial_tool.py 文件，\n"
+                                 "并将 AMAP_API_KEY 的值替换为您自己的高德Web服务API Key。\n"
+                                 "您可以从这里申请：https://lbs.amap.com/dev/key/app")
+
+        # Main PanedWindow for layout
+        main_paned_window = ttk.PanedWindow(master, orient=tk.VERTICAL)
+        main_paned_window.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        # Top Frame for POI Search
+        poi_search_frame_container = ttk.Frame(main_paned_window)
+        main_paned_window.add(poi_search_frame_container, weight=1)
+
+        # Input Frame for POI Search
+        input_frame = ttk.LabelFrame(poi_search_frame_container, text="周边POI查询 (WGS-84输入)")
+        input_frame.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
+
+        ttk.Label(input_frame, text="WGS-84 经度:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.lon_entry = ttk.Entry(input_frame, width=25)
+        self.lon_entry.grid(row=0, column=1, padx=5, pady=5)
+        self.lon_entry.insert(0, "119.429737") 
+
+        ttk.Label(input_frame, text="WGS-84 纬度:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        self.lat_entry = ttk.Entry(input_frame, width=25)
+        self.lat_entry.grid(row=1, column=1, padx=5, pady=5)
+        self.lat_entry.insert(0, "25.97546") 
+
+        ttk.Label(input_frame, text="查询关键字:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        self.keyword_entry = ttk.Entry(input_frame, width=25)
+        self.keyword_entry.grid(row=2, column=1, padx=5, pady=5)
+        self.keyword_entry.insert(0, "加油站") 
+
+        ttk.Label(input_frame, text="查询半径 (km):").grid(row=3, column=0, padx=5, pady=5, sticky="w")
+        self.radius_entry = ttk.Entry(input_frame, width=25)
+        self.radius_entry.grid(row=3, column=1, padx=5, pady=5)
+        self.radius_entry.insert(0, "6") 
+
+        self.search_button = ttk.Button(input_frame, text="查询POI", command=self.perform_search)
+        self.search_button.grid(row=4, column=0, columnspan=2, pady=10)
+
+        # Results Frame for POI Search
+        results_frame = ttk.LabelFrame(poi_search_frame_container, text="查询结果")
+        results_frame.grid(row=1, column=0, padx=10, pady=5, sticky="nsew")
+        poi_search_frame_container.grid_rowconfigure(1, weight=1)
+        poi_search_frame_container.grid_columnconfigure(0, weight=1)
+
+        columns = ("name", "lon", "lat")
+        self.results_tree = ttk.Treeview(results_frame, columns=columns, show="headings")
+        self.results_tree.heading("name", text="名称")
+        self.results_tree.heading("lon", text="WGS-84 经度")
+        self.results_tree.heading("lat", text="WGS-84 纬度")
+
+        self.results_tree.column("name", width=250, stretch=tk.YES)
+        self.results_tree.column("lon", width=150, anchor="e", stretch=tk.YES)
+        self.results_tree.column("lat", width=150, anchor="e", stretch=tk.YES)
+        
+        vsb = ttk.Scrollbar(results_frame, orient="vertical", command=self.results_tree.yview)
+        hsb = ttk.Scrollbar(results_frame, orient="horizontal", command=self.results_tree.xview)
+        self.results_tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+
+        self.results_tree.grid(row=0, column=0, sticky="nsew")
+        vsb.grid(row=0, column=1, sticky="ns")
+        hsb.grid(row=1, column=0, sticky="ew")
+
+        results_frame.grid_rowconfigure(0, weight=1)
+        results_frame.grid_columnconfigure(0, weight=1)
+        
+        # Export buttons for POI Search results
+        export_buttons_frame = ttk.Frame(poi_search_frame_container)
+        export_buttons_frame.grid(row=2, column=0, pady=(5,10), sticky="ew", padx=10)
+
+        self.export_excel_button = ttk.Button(export_buttons_frame, text="导出Excel", command=self.export_to_excel)
+        self.export_excel_button.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+
+        self.export_kml_button = ttk.Button(export_buttons_frame, text="导出KML", command=self.export_to_kml)
+        self.export_kml_button.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+
+        # Bottom Frame for Conversion Tools
+        conversion_tools_frame_container = ttk.Frame(main_paned_window)
+        main_paned_window.add(conversion_tools_frame_container, weight=0) # Less weight initially
+
+        tools_frame = ttk.LabelFrame(conversion_tools_frame_container, text="格式与坐标转换工具 (Excel/KML, WGS-84)")
+        tools_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        self.excel_to_kml_button = ttk.Button(tools_frame, text="Excel 转 KML", command=self.convert_excel_to_kml)
+        self.excel_to_kml_button.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+
+        self.kml_to_excel_button = ttk.Button(tools_frame, text="KML 转 Excel", command=self.convert_kml_to_excel)
+        self.kml_to_excel_button.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+
+        self.address_to_coords_button = ttk.Button(tools_frame, text="地址 转 经纬度 (Excel导入/导出)", command=self.convert_address_to_coords_excel)
+        self.address_to_coords_button.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+
+        self.coords_to_address_button = ttk.Button(tools_frame, text="经纬度 转 地址 (Excel导入/导出)", command=self.convert_coords_to_address_excel)
+        self.coords_to_address_button.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+        
+        tools_frame.grid_columnconfigure(0, weight=1)
+        tools_frame.grid_columnconfigure(1, weight=1)
+
+        # Status bar for this specific tool, placed within its own frame (master)
+        self.tool_status_label = ttk.Label(self.master, text="地理空间工具准备就绪。") 
+        self.tool_status_label.pack(side=tk.BOTTOM, pady=5, padx=10, fill=tk.X)
+        
+        self.current_results = []
+
+    def perform_search(self):
+        self.tool_status_label.config(text="正在查询...") # Use the new status label
+        self.master.update_idletasks()
+
+        if AMAP_API_KEY == "YOUR_AMAP_API_KEY_HERE" or not AMAP_API_KEY:
+            messagebox.showerror("API Key错误", "请先在脚本 geospatial_tool.py 中配置有效的高德API Key。")
+            self.tool_status_label.config(text="API Key未配置，请修改脚本后重试。") # Use the new status label
+            return
+
+        try:
+            wgs_lon_str = self.lon_entry.get().strip()
+            wgs_lat_str = self.lat_entry.get().strip()
+            keywords = self.keyword_entry.get().strip()
+            radius_km_str = self.radius_entry.get().strip()
+
+            if not all([wgs_lon_str, wgs_lat_str, keywords, radius_km_str]):
+                messagebox.showerror("输入错误", "所有输入字段均不能为空。")
+                self.tool_status_label.config(text="输入字段不能为空。") # Use the new status label
+                return
+
+            wgs_lon = float(wgs_lon_str)
+            wgs_lat = float(wgs_lat_str)
+            radius_km = float(radius_km_str)
+        except ValueError:
+            messagebox.showerror("输入错误", "经纬度和半径必须是有效的数字。")
+            self.tool_status_label.config(text="输入错误：经纬度和半径需为数字。") # Use the new status label
+            return
+
+        if not keywords:
+            messagebox.showerror("输入错误", "查询关键字不能为空。") # Redundant due to check above, but good to keep
+            self.tool_status_label.config(text="关键字不能为空。") # Use the new status label
+            return
+        
+        if radius_km <= 0:
+            messagebox.showerror("输入错误", "查询半径必须大于0。")
+            self.tool_status_label.config(text="半径错误：必须大于0。") # Use the new status label
+            return
+
+        radius_meters = radius_km * 1000
+
+        for i in self.results_tree.get_children():
+            self.results_tree.delete(i)
+        self.current_results = []
+
+        # WGS-84 to GCJ-02 for API call is handled within search_nearby_pois_amap
+        error_msg, pois = search_nearby_pois_amap(wgs_lon, wgs_lat, radius_meters, AMAP_API_KEY, keywords)
+
+        if error_msg:
+            messagebox.showerror("查询失败", f"{error_msg}")
+            self.tool_status_label.config(text=f"查询失败: {error_msg}") # Use the new status label
+        elif pois:
+            self.current_results = pois
+            for poi in pois:
+                self.results_tree.insert("", "end", values=(
+                    poi["name"],
+                    f"{poi['wgs84_lon']:.6f}", 
+                    f"{poi['wgs84_lat']:.6f}"
+                ))
+            self.tool_status_label.config(text=f"查询完成，找到 {len(pois)} 个结果。") # Use the new status label
+        else:
+            messagebox.showinfo("查询结果", "未找到符合条件的POI。")
+            self.tool_status_label.config(text="未找到结果。") # Use the new status label
+
+    def export_to_excel(self):
+        if not self.current_results:
+            messagebox.showinfo("无数据", "没有可导出的查询结果。")
+            return
+
+        try:
+            # Try to import openpyxl here to catch if it's not installed
+            import openpyxl
+        except ImportError:
+            messagebox.showerror("缺少库", "需要安装 openpyxl 库才能导出Excel。\n请运行: pip install openpyxl")
+            self.tool_status_label.config(text="导出失败:缺少openpyxl库。")
+            return
+
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".xlsx",
+            filetypes=[("Excel 工作簿", "*.xlsx"), ("所有文件", "*.*")],
+            title="保存查询结果为Excel"
+        )
+
+        if not file_path:
+            return
+
+        try:
+            workbook = openpyxl.Workbook()
+            sheet = workbook.active
+            sheet.title = "查询结果"
+
+            sheet["A1"] = "名称"
+            sheet["B1"] = "WGS-84 经度"
+            sheet["C1"] = "WGS-84 纬度"
+
+            for row_idx, poi in enumerate(self.current_results, start=2):
+                sheet[f"A{row_idx}"] = poi["name"]
+                sheet[f"B{row_idx}"] = poi["wgs84_lon"]
+                sheet[f"C{row_idx}"] = poi["wgs84_lat"]
+            
+            workbook.save(file_path)
+            messagebox.showinfo("导出成功", f"结果已成功导出到:\n{file_path}")
+            self.tool_status_label.config(text=f"结果已导出到 {file_path}")
+        except Exception as e:
+            messagebox.showerror("导出失败", f"导出到Excel时发生错误: {e}")
+            self.tool_status_label.config(text=f"导出失败: {e}")
+
+    def export_to_kml(self):
+        if not self.current_results:
+            messagebox.showinfo("无数据", "没有可导出的查询结果。")
+            return
+
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".kml",
+            filetypes=[("KML 文件", "*.kml"), ("所有文件", "*.*")],
+            title="保存查询结果为KML"
+        )
+
+        if not file_path:
+            return
+
+        kml = ET.Element("kml", xmlns="http://www.opengis.net/kml/2.2")
+        document = ET.SubElement(kml, "Document")
+
+        for poi in self.current_results:
+            placemark = create_kml_placemark(poi["name"], poi["wgs84_lon"], poi["wgs84_lat"])
+            document.append(placemark)
+
+        try:
+            tree_string = ET.tostring(kml, encoding='utf-8', method='xml')
+            pretty_xml_string = pretty_print_xml(tree_string.decode('utf-8'))
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(pretty_xml_string)
+            messagebox.showinfo("导出成功", f"结果已成功导出到:\n{file_path}")
+            self.tool_status_label.config(text=f"KML结果已导出到 {file_path}")
+        except Exception as e:
+            messagebox.showerror("导出KML失败", f"导出到KML时发生错误: {e}")
+            self.tool_status_label.config(text=f"导出KML失败: {e}")
+
+    def convert_excel_to_kml(self):
+        file_path = filedialog.askopenfilename(
+            title="选择Excel文件进行转换",
+            filetypes=[("Excel 工作簿", "*.xlsx"), ("所有文件", "*.*")]
+        )
+        if not file_path:
+            return
+
+        try:
+            workbook = openpyxl.load_workbook(file_path)
+            sheet = workbook.active
+
+            kml = ET.Element("kml", xmlns="http://www.opengis.net/kml/2.2")
+            document = ET.SubElement(kml, "Document")
+
+            # Assuming header in the first row
+            # A: 名称, B: 经度, C: 纬度, D: 备注
+            for row_idx, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+                if len(row) < 3 or not all(row[:3]): # Need at least name, lon, lat
+                    self.tool_status_label.config(text=f"跳过Excel第 {row_idx} 行：名称、经纬度不能为空。")
+                    continue
+                name = str(row[0])
+                try:
+                    lon = float(row[1])
+                    lat = float(row[2])
+                except (ValueError, TypeError):
+                    self.tool_status_label.config(text=f"跳过Excel第 {row_idx} 行：经纬度格式错误。")
+                    continue
+                
+                description = str(row[3]) if len(row) > 3 and row[3] is not None else ""
+                placemark = create_kml_placemark(name, lon, lat, description)
+                document.append(placemark)
+            
+            if not list(document):
+                messagebox.showinfo("无数据转换", "Excel文件中没有有效数据可转换为KML。")
+                self.tool_status_label.config(text="Excel转KML：无有效数据。")
+                return
+
+            save_path = filedialog.asksaveasfilename(
+                defaultextension=".kml",
+                filetypes=[("KML 文件", "*.kml"), ("所有文件", "*.*")],
+                title="保存KML文件"
+            )
+            if not save_path:
+                return
+
+            tree_string = ET.tostring(kml, encoding='utf-8', method='xml')
+            pretty_xml_string = pretty_print_xml(tree_string.decode('utf-8'))
+            with open(save_path, "w", encoding="utf-8") as f:
+                f.write(pretty_xml_string)
+            messagebox.showinfo("转换成功", f"Excel已成功转换为KML:\n{save_path}")
+            self.tool_status_label.config(text=f"Excel已转为KML: {save_path}")
+
+        except FileNotFoundError:
+            messagebox.showerror("文件错误", f"未找到文件: {file_path}")
+            self.tool_status_label.config(text=f"Excel转KML错误: 文件未找到")
+        except openpyxl.utils.exceptions.InvalidFileException:
+            messagebox.showerror("文件错误", f"无法打开或不是有效的Excel文件: {file_path}")
+            self.tool_status_label.config(text=f"Excel转KML错误: 无效Excel文件")
+        except Exception as e:
+            messagebox.showerror("转换失败", f"Excel转KML时发生错误: {e}")
+            self.tool_status_label.config(text=f"Excel转KML错误: {e}")
+
+    def convert_kml_to_excel(self):
+        file_path = filedialog.askopenfilename(
+            title="选择KML文件进行转换",
+            filetypes=[("KML 文件", "*.kml"), ("所有文件", "*.*")]
+        )
+        if not file_path:
+            return
+
+        try:
+            tree = ET.parse(file_path)
+            root = tree.getroot()
+            
+            # Determine the namespace from the root element
+            namespace = ''
+            if '}' in root.tag:
+                namespace = root.tag.split('}')[0] + '}' # e.g. {http://www.opengis.net/kml/2.2}
+            
+            workbook = openpyxl.Workbook()
+            sheet = workbook.active
+            sheet.title = "KML数据"
+            sheet["A1"] = "名称"
+            sheet["B1"] = "WGS-84 经度"
+            sheet["C1"] = "WGS-84 纬度"
+            sheet["D1"] = "备注信息"
+
+            row_num = 2
+            # Find all Placemark elements, regardless of their depth in the document
+            # Construct XPath queries with the determined namespace
+            placemark_query = f'.//{namespace}Placemark'
+            name_query = f'.//{namespace}name'
+            coordinates_query = f'.//{namespace}Point/{namespace}coordinates' # More specific path to coordinates
+            description_query = f'.//{namespace}description'
+
+            for placemark in root.findall(placemark_query):
+                name_elem = placemark.find(name_query.split('/')[-1]) # Find direct child 'name'
+                if name_elem is None: # Try finding it anywhere under placemark if not direct child
+                    name_elem = placemark.find(f'.//{namespace}name') 
+                name = name_elem.text.strip() if name_elem is not None and name_elem.text else "未命名"
+                
+                # Try specific path first, then more general
+                coords_elem = placemark.find(coordinates_query.split('/')[-2] + '/' + coordinates_query.split('/')[-1]) 
+                if coords_elem is None: # If not under Point, try finding coordinates anywhere under placemark
+                     coords_elem = placemark.find(f'.//{namespace}coordinates')
+
+                if coords_elem is None or not coords_elem.text:
+                    self.tool_status_label.config(text=f"跳过Placemark '{name}': 缺少坐标。")
+                    continue
+                
+                coords_text = coords_elem.text.strip()
+                try:
+                    # Handle coordinates that might have altitude or be space-separated
+                    coords_parts = coords_text.replace(',', ' ').split()
+                    lon = float(coords_parts[0])
+                    lat = float(coords_parts[1])
+                except (ValueError, IndexError):
+                    self.tool_status_label.config(text=f"跳过Placemark '{name}': 坐标格式错误 '{coords_text}'。")
+                    continue
+
+                desc_elem = placemark.find(description_query.split('/')[-1]) # Find direct child 'description'
+                if desc_elem is None: # Try finding it anywhere under placemark if not direct child
+                    desc_elem = placemark.find(f'.//{namespace}description')
+                description = desc_elem.text.strip() if desc_elem is not None and desc_elem.text else ""
+
+                sheet[f"A{row_num}"] = name
+                sheet[f"B{row_num}"] = lon
+                sheet[f"C{row_num}"] = lat
+                sheet[f"D{row_num}"] = description
+                row_num += 1
+            
+            if row_num == 2:
+                messagebox.showinfo("无数据转换", "KML文件中没有找到可转换的Placemark数据。")
+                self.tool_status_label.config(text="KML转Excel：无有效数据。")
+                return
+
+            save_path = filedialog.asksaveasfilename(
+                defaultextension=".xlsx",
+                filetypes=[("Excel 工作簿", "*.xlsx"), ("所有文件", "*.*")],
+                title="保存Excel文件"
+            )
+            if not save_path:
+                return
+
+            workbook.save(save_path)
+            messagebox.showinfo("转换成功", f"KML已成功转换为Excel:\n{save_path}")
+            self.tool_status_label.config(text=f"KML已转为Excel: {save_path}")
+
+        except FileNotFoundError:
+            messagebox.showerror("文件错误", f"未找到文件: {file_path}")
+            self.tool_status_label.config(text=f"KML转Excel错误: 文件未找到")
+        except ET.ParseError:
+            messagebox.showerror("文件错误", f"无法解析KML文件 (格式可能无效): {file_path}")
+            self.tool_status_label.config(text=f"KML转Excel错误: 无效KML文件")
+        except Exception as e:
+            messagebox.showerror("转换失败", f"KML转Excel时发生错误: {e}")
+            self.tool_status_label.config(text=f"KML转Excel错误: {e}")
+
+    def _process_excel_coords_conversion(self, conversion_type):
+        """Helper for Address to Coords and Coords to Address Excel processing."""
+        input_file_path = filedialog.askopenfilename(
+            title=f"选择包含 {'地址' if conversion_type == 'addr_to_coord' else '经纬度'} 的Excel文件",
+            filetypes=[("Excel 工作簿", "*.xlsx"), ("所有文件", "*.*")]
+        )
+        if not input_file_path:
+            return
+
+        if AMAP_API_KEY == "YOUR_AMAP_API_KEY_HERE" or not AMAP_API_KEY:
+            messagebox.showerror("API Key错误", "请先在脚本 geospatial_tool.py 中配置有效的高德API Key。")
+            self.tool_status_label.config(text="API Key未配置，请修改脚本后重试。") # Use the new status label
+            return
+
+        try:
+            workbook = openpyxl.load_workbook(input_file_path)
+            sheet = workbook.active
+            output_data = []
+            headers = [cell.value for cell in sheet[1]] # Get headers from first row
+            output_data.append(headers)
+
+            # Determine column indices (more robust than fixed A, B, C)
+            try:
+                addr_col_idx = headers.index("地址") if "地址" in headers else 0
+                lon_col_idx = headers.index("经度") if "经度" in headers else 1
+                lat_col_idx = headers.index("纬度") if "纬度" in headers else 2
+            except ValueError:
+                 messagebox.showerror("表头错误", "Excel文件必须包含'地址', '经度', '纬度'的表头。")
+                 self.tool_status_label.config(text="Excel表头错误。")
+                 return
+
+            self.tool_status_label.config(text="正在处理Excel文件...")
+            self.master.update_idletasks()
+            processed_count = 0
+
+            for row_idx, row_cells in enumerate(sheet.iter_rows(min_row=2), start=2):
+                row_values = [cell.value for cell in row_cells]
+                # Ensure row has enough columns based on header length
+                if len(row_values) < len(headers):
+                    row_values.extend([None] * (len(headers) - len(row_values)))
+                
+                current_row_output = list(row_values) # Start with original data
+
+                if conversion_type == 'addr_to_coord':
+                    address = str(row_values[addr_col_idx]).strip() if row_values[addr_col_idx] else None
+                    city = "" # Attempt without city first, or prompt user, or add a city column
+                    if address:
+                        err, lon_wgs, lat_wgs = get_coords_from_amap(address, city, AMAP_API_KEY)
+                        if err:
+                            self.tool_status_label.config(text=f"第{row_idx}行 '{address}': {err}")
+                        elif lon_wgs is not None and lat_wgs is not None:
+                            current_row_output[lon_col_idx] = lon_wgs
+                            current_row_output[lat_col_idx] = lat_wgs
+                            processed_count += 1
+                        else:
+                             self.tool_status_label.config(text=f"第{row_idx}行 '{address}': 未找到坐标。")
+                    else:
+                        self.tool_status_label.config(text=f"第{row_idx}行: 地址为空，跳过。")
+                
+                elif conversion_type == 'coord_to_addr':
+                    try:
+                        lon_wgs = float(row_values[lon_col_idx]) if row_values[lon_col_idx] is not None else None
+                        lat_wgs = float(row_values[lat_col_idx]) if row_values[lat_col_idx] is not None else None
+                    except (ValueError, TypeError):
+                        self.tool_status_label.config(text=f"第{row_idx}行: 经纬度格式错误，跳过。")
+                        lon_wgs, lat_wgs = None, None
+
+                    if lon_wgs is not None and lat_wgs is not None:
+                        address_result = get_address_from_amap(lon_wgs, lat_wgs, AMAP_API_KEY)
+                        current_row_output[addr_col_idx] = address_result
+                        if not address_result.startswith("错误") and not address_result.startswith("高德API错误") and not address_result.startswith("网络请求错误") and not address_result.startswith("解析高德API响应失败") and address_result != "地址未找到":
+                            processed_count +=1
+                        else:
+                            self.tool_status_label.config(text=f"第{row_idx}行 ({lon_wgs},{lat_wgs}): {address_result}")
+                    else:
+                        self.tool_status_label.config(text=f"第{row_idx}行: 经纬度为空，跳过。")
+                
+                output_data.append(current_row_output)
+                if row_idx % 10 == 0: # Update status periodically
+                    self.master.update_idletasks()
+            
+            if processed_count == 0 and len(list(sheet.iter_rows(min_row=2))) > 0:
+                 messagebox.showwarning("处理完成", "未成功处理任何行。请检查输入数据和API Key。")
+                 self.tool_status_label.config(text="未成功处理任何行。")
+                 return
+            elif processed_count == 0:
+                 messagebox.showinfo("无数据", "Excel文件中没有可处理的数据。")
+                 self.tool_status_label.config(text="Excel文件无数据。")
+                 return
+
+            output_file_path = filedialog.asksaveasfilename(
+                defaultextension=".xlsx",
+                filetypes=[("Excel 工作簿", "*.xlsx"), ("所有文件", "*.*")],
+                title="保存处理结果到Excel"
+            )
+            if not output_file_path:
+                return
+
+            new_workbook = openpyxl.Workbook()
+            new_sheet = new_workbook.active
+            for r_idx, data_row in enumerate(output_data):
+                for c_idx, value in enumerate(data_row):
+                    new_sheet.cell(row=r_idx + 1, column=c_idx + 1, value=value)
+            
+            new_workbook.save(output_file_path)
+            messagebox.showinfo("处理成功", f"文件已处理并保存到:\n{output_file_path}\n成功处理 {processed_count} 行。")
+            self.tool_status_label.config(text=f"Excel处理完成: {output_file_path}")
+
+        except FileNotFoundError:
+            messagebox.showerror("文件错误", f"未找到文件: {input_file_path}")
+            self.tool_status_label.config(text=f"Excel处理错误: 文件未找到")
+        except openpyxl.utils.exceptions.InvalidFileException:
+            messagebox.showerror("文件错误", f"无法打开或不是有效的Excel文件: {input_file_path}")
+            self.tool_status_label.config(text=f"Excel处理错误: 无效Excel文件")
+        except Exception as e:
+            messagebox.showerror("处理失败", f"处理Excel文件时发生错误: {e}")
+            self.tool_status_label.config(text=f"Excel处理错误: {e}")
+
+    def convert_address_to_coords_excel(self):
+        self._process_excel_coords_conversion('addr_to_coord')
+
+    def convert_coords_to_address_excel(self):
+        self._process_excel_coords_conversion('coord_to_addr')
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = GeoSpatialApp(root)
+    root.mainloop()
