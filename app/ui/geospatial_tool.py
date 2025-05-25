@@ -200,6 +200,99 @@ def create_kml_placemark(name, lon, lat, description=""):
     ET.SubElement(point, "coordinates").text = f"{lon},{lat},0"
     return placemark
 
+def create_kml_circle_placemark(name, center_lon, center_lat, radius_meters, description=""):
+    """创建圆形KML Placemark，使用Polygon近似圆形"""
+    placemark = ET.Element("Placemark")
+    ET.SubElement(placemark, "name").text = name
+    if description:
+        ET.SubElement(placemark, "description").text = description
+    
+    # 创建圆形的多边形近似（36个点）
+    polygon = ET.SubElement(placemark, "Polygon")
+    outer_boundary = ET.SubElement(polygon, "outerBoundaryIs")
+    linear_ring = ET.SubElement(outer_boundary, "LinearRing")
+    
+    # 计算圆周上的点
+    coordinates_list = []
+    num_points = 36  # 圆周上的点数
+    
+    # 地球半径（米）
+    earth_radius = 6378137.0
+    
+    for i in range(num_points + 1):  # +1 to close the polygon
+        angle = 2 * math.pi * i / num_points
+        
+        # 计算相对于中心点的偏移（以度为单位）
+        lat_offset = (radius_meters * math.cos(angle)) / earth_radius * (180 / math.pi)
+        lon_offset = (radius_meters * math.sin(angle)) / (earth_radius * math.cos(math.radians(center_lat))) * (180 / math.pi)
+        
+        point_lat = center_lat + lat_offset
+        point_lon = center_lon + lon_offset
+        
+        coordinates_list.append(f"{point_lon},{point_lat},0")
+    
+    coordinates_text = " ".join(coordinates_list)
+    ET.SubElement(linear_ring, "coordinates").text = coordinates_text
+    
+    return placemark
+
+def parse_kml_points(file_path):
+    """解析KML文件中的点信息"""
+    try:
+        tree = ET.parse(file_path)
+        root = tree.getroot()
+        
+        # 确定命名空间
+        namespace = ''
+        if '}' in root.tag:
+            namespace = root.tag.split('}')[0] + '}'
+        
+        points = []
+        placemark_query = f'.//{namespace}Placemark'
+        
+        for placemark in root.findall(placemark_query):
+            # 获取名称
+            name_elem = placemark.find(f'{namespace}name')
+            if name_elem is None:
+                name_elem = placemark.find(f'.//{namespace}name')
+            name = name_elem.text.strip() if name_elem is not None and name_elem.text else "未命名点"
+            
+            # 获取坐标（只处理Point类型）
+            point_elem = placemark.find(f'.//{namespace}Point')
+            if point_elem is not None:
+                coords_elem = point_elem.find(f'{namespace}coordinates')
+                if coords_elem is None:
+                    coords_elem = point_elem.find(f'.//{namespace}coordinates')
+                
+                if coords_elem is not None and coords_elem.text:
+                    coords_text = coords_elem.text.strip()
+                    try:
+                        # 处理坐标格式：lon,lat,alt 或 lon,lat
+                        coords_parts = coords_text.replace(',', ' ').split()
+                        lon = float(coords_parts[0])
+                        lat = float(coords_parts[1])
+                        
+                        # 获取描述
+                        desc_elem = placemark.find(f'{namespace}description')
+                        if desc_elem is None:
+                            desc_elem = placemark.find(f'.//{namespace}description')
+                        description = desc_elem.text.strip() if desc_elem is not None and desc_elem.text else ""
+                        
+                        points.append({
+                            'name': name,
+                            'lon': lon,
+                            'lat': lat,
+                            'description': description
+                        })
+                    except (ValueError, IndexError):
+                        continue
+        
+        return points, None
+    except ET.ParseError as e:
+        return [], f"KML文件解析错误: {e}"
+    except Exception as e:
+        return [], f"读取KML文件时发生错误: {e}"
+
 def pretty_print_xml(xml_string):
     parsed_string = parseString(xml_string)
     return parsed_string.toprettyxml(indent="  ")
@@ -308,6 +401,10 @@ class GeoSpatialApp:
 
         self.coords_to_address_button = ttk.Button(tools_frame, text="经纬度 转 地址 (Excel导入/导出)", command=self.convert_coords_to_address_excel)
         self.coords_to_address_button.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+        
+        # 点画圆功能按钮
+        self.point_to_circle_button = ttk.Button(tools_frame, text="KML点画圆 (上传KML点文件生成圆形)", command=self.convert_points_to_circles)
+        self.point_to_circle_button.grid(row=2, column=0, columnspan=2, padx=5, pady=5, sticky="ew")
         
         tools_frame.grid_columnconfigure(0, weight=1)
         tools_frame.grid_columnconfigure(1, weight=1)
@@ -738,6 +835,155 @@ class GeoSpatialApp:
 
     def convert_coords_to_address_excel(self):
         self._process_excel_coords_conversion('coord_to_addr')
+
+    def convert_points_to_circles(self):
+        """KML点画圆功能：上传KML点文件，输入半径，生成圆形KML文件"""
+        # 选择输入的KML点文件
+        input_file_path = filedialog.askopenfilename(
+            title="选择包含点信息的KML文件",
+            filetypes=[("KML 文件", "*.kml"), ("所有文件", "*.*")]
+        )
+        if not input_file_path:
+            return
+
+        # 解析KML文件中的点
+        self.tool_status_label.config(text="正在解析KML文件...")
+        self.master.update_idletasks()
+        
+        points, error_msg = parse_kml_points(input_file_path)
+        if error_msg:
+            messagebox.showerror("文件解析失败", error_msg)
+            self.tool_status_label.config(text=f"KML解析失败: {error_msg}")
+            return
+        
+        if not points:
+            messagebox.showinfo("无点数据", "KML文件中没有找到有效的点数据。")
+            self.tool_status_label.config(text="KML文件中无有效点数据。")
+            return
+        
+        # 创建对话框让用户输入圆半径
+        radius_dialog = tk.Toplevel(self.master)
+        radius_dialog.title("设置圆半径")
+        radius_dialog.geometry("400x200")
+        radius_dialog.transient(self.master)
+        radius_dialog.grab_set()
+        
+        # 居中显示对话框
+        radius_dialog.update_idletasks()
+        x = (radius_dialog.winfo_screenwidth() // 2) - (radius_dialog.winfo_width() // 2)
+        y = (radius_dialog.winfo_screenheight() // 2) - (radius_dialog.winfo_height() // 2)
+        radius_dialog.geometry(f"+{x}+{y}")
+        
+        # 对话框内容
+        info_frame = ttk.Frame(radius_dialog)
+        info_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        ttk.Label(info_frame, text=f"已找到 {len(points)} 个点", font=("Arial", 12)).pack(pady=(0, 10))
+        ttk.Label(info_frame, text="请输入圆的半径（米）:", font=("Arial", 10)).pack(pady=(0, 5))
+        
+        radius_var = tk.StringVar(value="1000")  # 默认1000米
+        radius_entry = ttk.Entry(info_frame, textvariable=radius_var, font=("Arial", 10), width=20)
+        radius_entry.pack(pady=(0, 15))
+        radius_entry.focus()
+        
+        # 按钮框架
+        button_frame = ttk.Frame(info_frame)
+        button_frame.pack(fill=tk.X)
+        
+        result_radius = [None]  # 使用列表来存储结果，以便在内部函数中修改
+        
+        def on_ok():
+            try:
+                radius = float(radius_var.get().strip())
+                if radius <= 0:
+                    messagebox.showerror("输入错误", "半径必须大于0")
+                    return
+                result_radius[0] = radius
+                radius_dialog.destroy()
+            except ValueError:
+                messagebox.showerror("输入错误", "请输入有效的数字")
+        
+        def on_cancel():
+            radius_dialog.destroy()
+        
+        ttk.Button(button_frame, text="确定", command=on_ok).pack(side=tk.LEFT, padx=(0, 10))
+        ttk.Button(button_frame, text="取消", command=on_cancel).pack(side=tk.LEFT)
+        
+        # 绑定回车键
+        radius_entry.bind('<Return>', lambda e: on_ok())
+        
+        # 等待对话框关闭
+        self.master.wait_window(radius_dialog)
+        
+        # 检查用户是否取消了操作
+        if result_radius[0] is None:
+            self.tool_status_label.config(text="操作已取消。")
+            return
+        
+        radius_meters = result_radius[0]
+        
+        # 选择输出文件路径
+        output_file_path = filedialog.asksaveasfilename(
+            defaultextension=".kml",
+            filetypes=[("KML 文件", "*.kml"), ("所有文件", "*.*")],
+            title="保存圆形KML文件"
+        )
+        if not output_file_path:
+            self.tool_status_label.config(text="未选择输出文件，操作取消。")
+            return
+        
+        # 生成圆形KML文件
+        try:
+            self.tool_status_label.config(text="正在生成圆形KML文件...")
+            self.master.update_idletasks()
+            
+            kml = ET.Element("kml", xmlns="http://www.opengis.net/kml/2.2")
+            document = ET.SubElement(kml, "Document")
+            
+            # 添加文档信息
+            ET.SubElement(document, "name").text = "点画圆结果"
+            ET.SubElement(document, "description").text = f"基于 {len(points)} 个点生成的圆形，半径: {radius_meters} 米"
+            
+            # 为每个点创建圆形
+            for i, point in enumerate(points):
+                circle_name = f"{point['name']}_圆形_{radius_meters}m"
+                circle_description = f"原点: {point['name']}\n半径: {radius_meters} 米"
+                if point['description']:
+                    circle_description += f"\n原描述: {point['description']}"
+                
+                circle_placemark = create_kml_circle_placemark(
+                    circle_name, 
+                    point['lon'], 
+                    point['lat'], 
+                    radius_meters, 
+                    circle_description
+                )
+                document.append(circle_placemark)
+                
+                # 更新进度
+                if (i + 1) % 10 == 0 or i == len(points) - 1:
+                    self.tool_status_label.config(text=f"正在生成圆形... ({i + 1}/{len(points)})")
+                    self.master.update_idletasks()
+            
+            # 保存KML文件
+            tree_string = ET.tostring(kml, encoding='utf-8', method='xml')
+            pretty_xml_string = pretty_print_xml(tree_string.decode('utf-8'))
+            
+            with open(output_file_path, "w", encoding="utf-8") as f:
+                f.write(pretty_xml_string)
+            
+            messagebox.showinfo(
+                "生成成功", 
+                f"圆形KML文件已成功生成！\n\n"
+                f"输入点数: {len(points)}\n"
+                f"圆半径: {radius_meters} 米\n"
+                f"输出文件: {output_file_path}"
+            )
+            self.tool_status_label.config(text=f"圆形KML已生成: {output_file_path}")
+            
+        except Exception as e:
+            messagebox.showerror("生成失败", f"生成圆形KML文件时发生错误: {e}")
+            self.tool_status_label.config(text=f"生成圆形KML失败: {e}")
 
 if __name__ == "__main__":
     root = tk.Tk()
