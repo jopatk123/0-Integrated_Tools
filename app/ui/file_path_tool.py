@@ -263,8 +263,8 @@ class FilePathTool:
             
         # 选择保存文件的位置
         file_path = filedialog.asksaveasfilename(
-            defaultextension=".txt",
-            filetypes=[("文本文件", "*.txt"), ("所有文件", "*.*")],
+            defaultextension=".xlsx",
+            filetypes=[("Excel文件", "*.xlsx"), ("所有文件", "*.*")],
             title="选择导出位置"
         )
         
@@ -272,13 +272,27 @@ class FilePathTool:
             return
             
         try:
-            with open(file_path, 'w', encoding='utf-8') as f:
-                for item in self.file_tree.get_children():
-                    values = self.file_tree.item(item)["values"]
-                    path = values[0]  # 获取路径
-                    size = values[1]  # 获取大小
-                    modified = values[2]  # 获取修改时间
-                    f.write(f"{path}\t{size}\t{modified}\n")
+            import pandas as pd
+            
+            # 准备数据
+            data = []
+            for item in self.file_tree.get_children():
+                values = self.file_tree.item(item)["values"]
+                path = values[0]  # 完整路径
+                size = values[1]  # 大小
+                modified = values[2]  # 修改时间
+                name = os.path.basename(path)  # 文件或文件夹名称
+                
+                data.append({
+                    '完整路径': path,
+                    '名称': name,
+                    '大小': size,
+                    '修改时间': modified
+                })
+            
+            # 创建DataFrame并导出到Excel
+            df = pd.DataFrame(data)
+            df.to_excel(file_path, index=False, engine='openpyxl')
                     
             messagebox.showinfo("成功", f"路径已导出到：{file_path}")
             

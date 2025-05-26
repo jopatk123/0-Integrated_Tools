@@ -34,6 +34,11 @@ class RenameTool:
                                bg=button_style["bg"], fg=button_style["fg"])
         import_button.pack(side=tk.LEFT, padx=5)
         
+        # 导出Excel模版按钮
+        export_template_button = tk.Button(top_frame, text="导出Excel模版", command=self.export_excel_template,
+                                        bg=button_style["bg"], fg=button_style["fg"])
+        export_template_button.pack(side=tk.LEFT, padx=5)
+        
         # 执行重命名按钮
         self.rename_button = tk.Button(top_frame, text="执行重命名", command=self.execute_rename,
                                     bg=button_style["bg"], fg=button_style["fg"], state=tk.DISABLED)
@@ -117,6 +122,42 @@ class RenameTool:
                 
         except Exception as e:
             messagebox.showerror("错误", f"导入Excel时出错: {str(e)}")
+    
+    def export_excel_template(self):
+        """导出Excel重命名模版"""
+        # 选择保存文件的位置
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".xlsx",
+            filetypes=[("Excel文件", "*.xlsx"), ("所有文件", "*.*")],
+            title="选择模版保存位置"
+        )
+        
+        if not file_path:
+            return
+            
+        try:
+            # 创建示例数据
+            template_data = {
+                '原路径': [
+                    'C:\\示例文件夹\\原文件名1.txt',
+                    'C:\\示例文件夹\\原文件名2.jpg',
+                    'C:\\示例文件夹\\原文件名3.pdf'
+                ],
+                '新名称': [
+                    '新文件名1.txt',
+                    '新文件名2.jpg', 
+                    '新文件名3.pdf'
+                ]
+            }
+            
+            # 创建DataFrame并导出到Excel
+            df = pd.DataFrame(template_data)
+            df.to_excel(file_path, index=False, engine='openpyxl')
+            
+            messagebox.showinfo("成功", f"Excel模版已导出到：{file_path}\n\n使用说明：\n1. 在'原路径'列填入要重命名的文件完整路径\n2. 在'新名称'列填入新的文件名（包含扩展名）\n3. 保存后通过'导入Excel'按钮导入")
+            
+        except Exception as e:
+            messagebox.showerror("错误", f"导出模版时出错: {str(e)}")
             
     def execute_rename(self):
         if not self.rename_tree.get_children():
