@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET # For KML parsing/generation
 from xml.dom.minidom import parseString # For pretty KML output
 
 # 高德Web服务API Key，用户需要替换为自己的Key
-AMAP_API_KEY = "7a54ad9541e0106cba1557c1686d00d2" 
+AMAP_API_KEY = "需要替换为自己的Key" 
 
 # --- 坐标转换函数 (WGS-84 <-> GCJ-02) ---
 x_pi = 3.14159265358979324 * 3000.0 / 180.0
