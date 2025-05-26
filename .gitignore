@@ -18,3 +18,12 @@ Thumbs.db
 .jpg
 .png
 .jpeg
+
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# uv specific
+.uv/
+.uvenv/

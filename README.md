@@ -38,16 +38,39 @@
 │       └── theme.py                # 主题管理器
 ├── Rename_Template.xlsx      # 重命名模板示例
 ├── requirements.txt          # 依赖库列表
+├── pyproject.toml            # 项目配置文件
+├── .python-version           # Python版本配置
 ├── .gitignore                # Git忽略文件
 └── README.md                 # 项目说明文档
 ```
 
+## 环境管理
+
+本项目使用uv进行环境管理，确保依赖一致性和可重现性。
+
+1. 安装uv（如果尚未安装）：
+   ```
+   pip install uv
+   ```
+2. 安装依赖：
+   ```
+   uv pip install -r requirements.txt
+   # 或者使用pyproject.toml
+   uv pip install -e .
+   ```
+
 ## 安装与运行
 
-1. 安装依赖：
+1. 安装依赖（传统方式）：
    ```
    pip install -r requirements.txt
    ```
+   
+   或使用uv（推荐）：
+   ```
+   uv pip install -r requirements.txt
+   ```
+   
 2. 运行主程序：
    ```
    python main.py
@@ -67,7 +90,7 @@
 
 ## 依赖说明
 
-- Python 3.7+
+- Python 3.13+
 - tkinter（Python内置）
 - pandas>=1.3.0（数据处理和Excel操作）
 - Pillow>=8.0.0（图像处理）
