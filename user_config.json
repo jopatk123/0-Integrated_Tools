@@ -1,0 +1,36 @@
+{
+  "amap_api_key": "635698df46a5c6ddf942ddb093ca1738",
+  "favorite_locations": [
+    {
+      "name": "家",
+      "lng": 116.397428,
+      "lat": 39.90923
+    },
+    {
+      "name": "公司",
+      "lng": 116.407526,
+      "lat": 39.90403
+    }
+  ],
+  "favorite_cities": [
+    "北京",
+    "上海",
+    "广州",
+    "深圳"
+  ],
+  "ui_settings": {
+    "window_size": "1000x700",
+    "theme": "default",
+    "auto_save_results": true,
+    "show_coordinate_conversion": true
+  },
+  "cache_settings": {
+    "enable_cache": true,
+    "cache_duration_hours": 24,
+    "max_cache_size_mb": 50
+  },
+  "history_settings": {
+    "max_history_items": 100,
+    "auto_clear_days": 30
+  }
+}

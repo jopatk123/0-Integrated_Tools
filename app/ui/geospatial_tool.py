@@ -5,14 +5,17 @@ import requests
 import json
 import math
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox, simpledialog
 import openpyxl # For Excel export
 import requests.utils # For URL encoding
 import xml.etree.ElementTree as ET # For KML parsing/generation
 from xml.dom.minidom import parseString # For pretty KML output
+import os
+import sys
 
-# 高德Web服务API Key，用户需要替换为自己的Key
-AMAP_API_KEY = "635698df46a5c6ddf942ddb093ca1738" 
+# 添加项目根目录到路径，以便导入config模块
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+from config import config 
 
 # --- 坐标转换函数 (WGS-84 <-> GCJ-02) ---
 x_pi = 3.14159265358979324 * 3000.0 / 180.0
@@ -84,10 +87,12 @@ def gcj02_to_wgs84(lng_gcj, lat_gcj):
     return lng_wgs, lat_wgs
 
 # --- 高德API调用函数 ---
-def get_address_from_amap(lon_wgs, lat_wgs, api_key):
+def get_address_from_amap(lon_wgs, lat_wgs, api_key=None):
     """使用高德逆地理编码API获取地址信息 (输入WGS-84, API使用GCJ-02)"""
-    if api_key == "YOUR_AMAP_API_KEY_HERE" or not api_key:
-        return "错误：请在脚本中配置您的高德API Key"
+    if api_key is None:
+        api_key = config.get_amap_api_key()
+    if not api_key:
+        return "错误：请在配置中设置您的高德API Key"
     lon_gcj, lat_gcj = wgs84_to_gcj02(lon_wgs, lat_wgs)
     url = f"https://restapi.amap.com/v3/geocode/regeo?output=json&location={lon_gcj},{lat_gcj}&key={api_key}&radius=1000&extensions=base"
     try:
@@ -103,10 +108,12 @@ def get_address_from_amap(lon_wgs, lat_wgs, api_key):
     except json.JSONDecodeError:
         return "解析高德API响应失败"
 
-def get_coords_from_amap(address, city, api_key):
+def get_coords_from_amap(address, city, api_key=None):
     """使用高德地理编码API获取经纬度信息 (返回WGS-84)"""
-    if api_key == "YOUR_AMAP_API_KEY_HERE" or not api_key:
-        return "错误：请在脚本中配置您的高德API Key", None, None
+    if api_key is None:
+        api_key = config.get_amap_api_key()
+    if not api_key:
+        return "错误：请在配置中设置您的高德API Key", None, None
     url = f"https://restapi.amap.com/v3/geocode/geo?address={requests.utils.quote(address)}&city={requests.utils.quote(city)}&output=json&key={api_key}"
     try:
         response = requests.get(url, timeout=10)
@@ -128,10 +135,12 @@ def get_coords_from_amap(address, city, api_key):
         return "解析高德API响应或数据格式错误", None, None
 
 
-def search_nearby_pois_amap(lon_wgs, lat_wgs, radius_meters, api_key, search_keywords, search_types=""):
+def search_nearby_pois_amap(lon_wgs, lat_wgs, radius_meters, search_keywords, search_types="", api_key=None):
     """使用高德周边搜索API查找POI (输入WGS-84, API使用GCJ-02, 输出WGS-84)"""
-    if api_key == "YOUR_AMAP_API_KEY_HERE" or not api_key:
-        return "错误：请在脚本中配置您的高德API Key", []
+    if api_key is None:
+        api_key = config.get_amap_api_key()
+    if not api_key:
+        return "错误：请在配置中设置您的高德API Key", []
     
     lon_gcj, lat_gcj = wgs84_to_gcj02(lon_wgs, lat_wgs)
 
@@ -305,11 +314,11 @@ class GeoSpatialApp:
         # master.geometry("800x700") # Adjusted initial size - Removed, as Frame doesn't have geometry
 
         # API Key Check
-        if AMAP_API_KEY == "YOUR_AMAP_API_KEY_HERE" or not AMAP_API_KEY:
+        if not config.get_amap_api_key():
             messagebox.showwarning("API Key未配置", 
-                                 "请打开 geospatial_tool.py 文件，\n"
-                                 "并将 AMAP_API_KEY 的值替换为您自己的高德Web服务API Key。\n"
-                                 "您可以从这里申请：https://lbs.amap.com/dev/key/app")
+                                 "请在配置中设置您的高德Web服务API Key。\n"
+                                 "您可以从这里申请：https://lbs.amap.com/dev/key/app\n"
+                                 "点击'配置管理'按钮进行设置。")
 
         # Main PanedWindow for layout
         main_paned_window = ttk.PanedWindow(master, orient=tk.VERTICAL)
@@ -323,28 +332,50 @@ class GeoSpatialApp:
         input_frame = ttk.LabelFrame(poi_search_frame_container, text="周边POI查询 (WGS-84输入)")
         input_frame.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
 
-        ttk.Label(input_frame, text="WGS-84 经度:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        # 配置管理按钮
+        config_frame = ttk.Frame(input_frame)
+        config_frame.grid(row=0, column=0, columnspan=3, pady=5, sticky="ew")
+        
+        self.config_button = ttk.Button(config_frame, text="配置管理", command=self.open_config_dialog)
+        self.config_button.pack(side=tk.LEFT, padx=5)
+        
+        # 收藏位置下拉框
+        ttk.Label(config_frame, text="收藏位置:").pack(side=tk.LEFT, padx=(20, 5))
+        self.favorite_var = tk.StringVar()
+        self.favorite_combo = ttk.Combobox(config_frame, textvariable=self.favorite_var, width=15, state="readonly")
+        self.favorite_combo.pack(side=tk.LEFT, padx=5)
+        self.favorite_combo.bind("<<ComboboxSelected>>", self.on_favorite_selected)
+        self.update_favorite_locations()
+        
+        ttk.Label(input_frame, text="WGS-84 经度:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
         self.lon_entry = ttk.Entry(input_frame, width=25)
-        self.lon_entry.grid(row=0, column=1, padx=5, pady=5)
+        self.lon_entry.grid(row=1, column=1, padx=5, pady=5)
         self.lon_entry.insert(0, "119.429737") 
+        
+        # 添加收藏按钮
+        self.add_favorite_button = ttk.Button(input_frame, text="收藏", command=self.add_current_location_to_favorites)
+        self.add_favorite_button.grid(row=1, column=2, padx=5, pady=5)
 
-        ttk.Label(input_frame, text="WGS-84 纬度:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        ttk.Label(input_frame, text="WGS-84 纬度:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
         self.lat_entry = ttk.Entry(input_frame, width=25)
-        self.lat_entry.grid(row=1, column=1, padx=5, pady=5)
+        self.lat_entry.grid(row=2, column=1, padx=5, pady=5)
         self.lat_entry.insert(0, "25.97546") 
 
-        ttk.Label(input_frame, text="查询关键字:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        ttk.Label(input_frame, text="查询关键字:").grid(row=3, column=0, padx=5, pady=5, sticky="w")
         self.keyword_entry = ttk.Entry(input_frame, width=25)
-        self.keyword_entry.grid(row=2, column=1, padx=5, pady=5)
+        self.keyword_entry.grid(row=3, column=1, padx=5, pady=5)
         self.keyword_entry.insert(0, "加油站") 
 
-        ttk.Label(input_frame, text="查询半径 (km):").grid(row=3, column=0, padx=5, pady=5, sticky="w")
+        ttk.Label(input_frame, text="查询半径 (km):").grid(row=4, column=0, padx=5, pady=5, sticky="w")
         self.radius_entry = ttk.Entry(input_frame, width=25)
-        self.radius_entry.grid(row=3, column=1, padx=5, pady=5)
+        self.radius_entry.grid(row=4, column=1, padx=5, pady=5)
         self.radius_entry.insert(0, "6") 
 
         self.search_button = ttk.Button(input_frame, text="查询POI", command=self.perform_search)
-        self.search_button.grid(row=4, column=0, columnspan=2, pady=10)
+        self.search_button.grid(row=5, column=0, columnspan=3, pady=10)
+        
+        # 配置列权重
+        input_frame.grid_columnconfigure(1, weight=1)
 
         # Results Frame for POI Search
         results_frame = ttk.LabelFrame(poi_search_frame_container, text="查询结果")
@@ -419,9 +450,9 @@ class GeoSpatialApp:
         self.tool_status_label.config(text="正在查询...") # Use the new status label
         self.master.update_idletasks()
 
-        if AMAP_API_KEY == "YOUR_AMAP_API_KEY_HERE" or not AMAP_API_KEY:
-            messagebox.showerror("API Key错误", "请先在脚本 geospatial_tool.py 中配置有效的高德API Key。")
-            self.tool_status_label.config(text="API Key未配置，请修改脚本后重试。") # Use the new status label
+        if not config.get_amap_api_key():
+            messagebox.showerror("API Key错误", "请先在配置中设置有效的高德API Key。")
+            self.tool_status_label.config(text="API Key未配置，请在配置管理中设置。") # Use the new status label
             return
 
         try:
@@ -460,7 +491,7 @@ class GeoSpatialApp:
         self.current_results = []
 
         # WGS-84 to GCJ-02 for API call is handled within search_nearby_pois_amap
-        error_msg, pois = search_nearby_pois_amap(wgs_lon, wgs_lat, radius_meters, AMAP_API_KEY, keywords)
+        error_msg, pois = search_nearby_pois_amap(wgs_lon, wgs_lat, radius_meters, keywords)
 
         if error_msg:
             messagebox.showerror("查询失败", f"{error_msg}")
@@ -721,9 +752,9 @@ class GeoSpatialApp:
         if not input_file_path:
             return
 
-        if AMAP_API_KEY == "YOUR_AMAP_API_KEY_HERE" or not AMAP_API_KEY:
-            messagebox.showerror("API Key错误", "请先在脚本 geospatial_tool.py 中配置有效的高德API Key。")
-            self.tool_status_label.config(text="API Key未配置，请修改脚本后重试。") # Use the new status label
+        if not config.get_amap_api_key():
+            messagebox.showerror("API Key错误", "请先在配置中设置有效的高德API Key。")
+            self.tool_status_label.config(text="API Key未配置，请在配置管理中设置。") # Use the new status label
             return
 
         try:
@@ -759,7 +790,7 @@ class GeoSpatialApp:
                     address = str(row_values[addr_col_idx]).strip() if row_values[addr_col_idx] else None
                     city = "" # Attempt without city first, or prompt user, or add a city column
                     if address:
-                        err, lon_wgs, lat_wgs = get_coords_from_amap(address, city, AMAP_API_KEY)
+                        err, lon_wgs, lat_wgs = get_coords_from_amap(address, city)
                         if err:
                             self.tool_status_label.config(text=f"第{row_idx}行 '{address}': {err}")
                         elif lon_wgs is not None and lat_wgs is not None:
@@ -780,7 +811,7 @@ class GeoSpatialApp:
                         lon_wgs, lat_wgs = None, None
 
                     if lon_wgs is not None and lat_wgs is not None:
-                        address_result = get_address_from_amap(lon_wgs, lat_wgs, AMAP_API_KEY)
+                        address_result = get_address_from_amap(lon_wgs, lat_wgs)
                         current_row_output[addr_col_idx] = address_result
                         if not address_result.startswith("错误") and not address_result.startswith("高德API错误") and not address_result.startswith("网络请求错误") and not address_result.startswith("解析高德API响应失败") and address_result != "地址未找到":
                             processed_count +=1
@@ -984,6 +1015,179 @@ class GeoSpatialApp:
         except Exception as e:
             messagebox.showerror("生成失败", f"生成圆形KML文件时发生错误: {e}")
             self.tool_status_label.config(text=f"生成圆形KML失败: {e}")
+    
+    def open_config_dialog(self):
+        """打开配置管理对话框"""
+        config_window = tk.Toplevel(self.master)
+        config_window.title("配置管理")
+        config_window.geometry("500x400")
+        config_window.transient(self.master)
+        config_window.grab_set()
+        
+        # API Key配置
+        api_frame = ttk.LabelFrame(config_window, text="高德地图API配置")
+        api_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        ttk.Label(api_frame, text="API Key:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        api_key_var = tk.StringVar(value=config.get_amap_api_key())
+        api_key_entry = ttk.Entry(api_frame, textvariable=api_key_var, width=50, show="*")
+        api_key_entry.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+        
+        def toggle_api_key_visibility():
+            if api_key_entry.cget('show') == '*':
+                api_key_entry.config(show='')
+                show_button.config(text="隐藏")
+            else:
+                api_key_entry.config(show='*')
+                show_button.config(text="显示")
+        
+        show_button = ttk.Button(api_frame, text="显示", command=toggle_api_key_visibility)
+        show_button.grid(row=0, column=2, padx=5, pady=5)
+        
+        api_frame.grid_columnconfigure(1, weight=1)
+        
+        # 收藏位置管理
+        favorites_frame = ttk.LabelFrame(config_window, text="收藏位置管理")
+        favorites_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # 收藏位置列表
+        columns = ("name", "lng", "lat")
+        favorites_tree = ttk.Treeview(favorites_frame, columns=columns, show="headings", height=8)
+        favorites_tree.heading("name", text="名称")
+        favorites_tree.heading("lng", text="经度")
+        favorites_tree.heading("lat", text="纬度")
+        
+        favorites_tree.column("name", width=150)
+        favorites_tree.column("lng", width=120)
+        favorites_tree.column("lat", width=120)
+        
+        favorites_scrollbar = ttk.Scrollbar(favorites_frame, orient="vertical", command=favorites_tree.yview)
+        favorites_tree.configure(yscrollcommand=favorites_scrollbar.set)
+        
+        favorites_tree.grid(row=0, column=0, columnspan=4, sticky="nsew", padx=5, pady=5)
+        favorites_scrollbar.grid(row=0, column=4, sticky="ns", pady=5)
+        
+        def refresh_favorites_tree():
+            for item in favorites_tree.get_children():
+                favorites_tree.delete(item)
+            for loc in config.get_favorite_locations():
+                favorites_tree.insert("", "end", values=(loc['name'], f"{loc['lng']:.6f}", f"{loc['lat']:.6f}"))
+        
+        refresh_favorites_tree()
+        
+        # 添加新收藏位置
+        add_frame = ttk.Frame(favorites_frame)
+        add_frame.grid(row=1, column=0, columnspan=5, sticky="ew", padx=5, pady=5)
+        
+        ttk.Label(add_frame, text="名称:").grid(row=0, column=0, padx=5)
+        name_var = tk.StringVar()
+        name_entry = ttk.Entry(add_frame, textvariable=name_var, width=15)
+        name_entry.grid(row=0, column=1, padx=5)
+        
+        ttk.Label(add_frame, text="经度:").grid(row=0, column=2, padx=5)
+        lng_var = tk.StringVar()
+        lng_entry = ttk.Entry(add_frame, textvariable=lng_var, width=12)
+        lng_entry.grid(row=0, column=3, padx=5)
+        
+        ttk.Label(add_frame, text="纬度:").grid(row=0, column=4, padx=5)
+        lat_var = tk.StringVar()
+        lat_entry = ttk.Entry(add_frame, textvariable=lat_var, width=12)
+        lat_entry.grid(row=0, column=5, padx=5)
+        
+        def add_favorite():
+            name = name_var.get().strip()
+            try:
+                lng = float(lng_var.get().strip())
+                lat = float(lat_var.get().strip())
+                if name and config.add_favorite_location(name, lng, lat):
+                    refresh_favorites_tree()
+                    self.update_favorite_locations()
+                    name_var.set("")
+                    lng_var.set("")
+                    lat_var.set("")
+                    messagebox.showinfo("成功", f"已添加收藏位置: {name}")
+                else:
+                    messagebox.showerror("错误", "请输入有效的名称和坐标")
+            except ValueError:
+                messagebox.showerror("错误", "请输入有效的数字坐标")
+        
+        def delete_favorite():
+            selected = favorites_tree.selection()
+            if selected:
+                item = favorites_tree.item(selected[0])
+                name = item['values'][0]
+                if messagebox.askyesno("确认删除", f"确定要删除收藏位置 '{name}' 吗？"):
+                    if config.remove_favorite_location(name):
+                        refresh_favorites_tree()
+                        self.update_favorite_locations()
+                        messagebox.showinfo("成功", f"已删除收藏位置: {name}")
+            else:
+                messagebox.showwarning("提示", "请先选择要删除的收藏位置")
+        
+        add_button = ttk.Button(add_frame, text="添加", command=add_favorite)
+        add_button.grid(row=0, column=6, padx=10)
+        
+        delete_button = ttk.Button(add_frame, text="删除选中", command=delete_favorite)
+        delete_button.grid(row=0, column=7, padx=5)
+        
+        favorites_frame.grid_rowconfigure(0, weight=1)
+        favorites_frame.grid_columnconfigure(0, weight=1)
+        
+        # 保存按钮
+        button_frame = ttk.Frame(config_window)
+        button_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        def save_config():
+            # 保存API Key
+            if config.set_amap_api_key(api_key_var.get().strip()):
+                messagebox.showinfo("成功", "配置已保存")
+                config_window.destroy()
+            else:
+                messagebox.showerror("错误", "保存配置失败")
+        
+        def cancel_config():
+            config_window.destroy()
+        
+        ttk.Button(button_frame, text="保存", command=save_config).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(button_frame, text="取消", command=cancel_config).pack(side=tk.RIGHT, padx=5)
+    
+    def update_favorite_locations(self):
+        """更新收藏位置下拉框"""
+        favorites = config.get_favorite_locations()
+        favorite_names = [loc['name'] for loc in favorites]
+        self.favorite_combo['values'] = favorite_names
+        if favorite_names:
+            self.favorite_combo.set('')  # 清空选择
+    
+    def on_favorite_selected(self, event):
+        """当选择收藏位置时，自动填充坐标"""
+        selected_name = self.favorite_var.get()
+        if selected_name:
+            favorites = config.get_favorite_locations()
+            for loc in favorites:
+                if loc['name'] == selected_name:
+                    self.lon_entry.delete(0, tk.END)
+                    self.lon_entry.insert(0, str(loc['lng']))
+                    self.lat_entry.delete(0, tk.END)
+                    self.lat_entry.insert(0, str(loc['lat']))
+                    break
+    
+    def add_current_location_to_favorites(self):
+        """将当前输入的坐标添加到收藏位置"""
+        try:
+            lng = float(self.lon_entry.get().strip())
+            lat = float(self.lat_entry.get().strip())
+            
+            # 弹出对话框让用户输入名称
+            name = tk.simpledialog.askstring("添加收藏位置", "请输入位置名称:")
+            if name and name.strip():
+                if config.add_favorite_location(name.strip(), lng, lat):
+                    self.update_favorite_locations()
+                    messagebox.showinfo("成功", f"已添加收藏位置: {name.strip()}")
+                else:
+                    messagebox.showerror("错误", "添加收藏位置失败")
+        except ValueError:
+            messagebox.showerror("错误", "请输入有效的坐标")
 
 if __name__ == "__main__":
     root = tk.Tk()

@@ -2,7 +2,9 @@ class ThemeManager:
     def __init__(self):
         # 设置主题颜色
         self.bg_color = "#f0f0f0"
+        self.text_color = "#333333"
         self.accent_color = "#4a7abc"
+        self.button_color = "#4a7abc"
         self.warning_color = "#ff4444"
         self.caution_color = "#ffcc44"
     

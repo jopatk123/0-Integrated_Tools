@@ -1,113 +1,213 @@
-# 文件工具集成平台
+# 高德地图工具 - 个人版
 
-## 项目简介
+一个基于高德地图API的个人使用工具，提供路径规划、地址查询、天气查询等功能。
 
-本项目是一个基于Python和Tkinter开发的多功能文件工具集成平台，旨在为用户提供文件路径获取、批量重命名、文件整理、图片GPS信息提取、视频压缩等常用文件操作的图形化解决方案。平台采用模块化设计，便于扩展和维护。
+## 功能特性
 
-## 主要功能
+### 🗺️ 路径规划
+- 驾车、步行、骑行、公交路径规划
+- 支持WGS-84坐标自动转换为GCJ-02坐标
+- 显示详细的路径步骤和预计时间
+- 自动获取起点和终点地址信息
 
-- **文件路径获取**：浏览、扫描指定文件夹，支持文件过滤、导出Excel格式路径信息（包含完整路径、名称、大小、修改时间）、复制路径等操作。
-- **批量文件重命名**：支持手动添加、Excel导入重命名规则，提供Excel模版导出功能，一键批量重命名。
-- **文件整理**：可将文件自动整理到与文件名同名的文件夹中。
-- **图片GPS信息提取**：批量提取图片的GPS信息，支持重命名图片和文件夹。
-- **视频压缩**：批量压缩视频文件，支持自定义压缩程度。
-- **最近点位匹配**：根据经纬度坐标计算并匹配最近的点位，支持Excel导入导出。
-- **图片处理工具**：批量加载、预览、调整图片大小、裁剪和保存图片，支持多线程处理。
+### 📍 地址服务
+- 坐标转地址（逆地理编码）
+- 地址转坐标（地理编码）
+- 批量地址处理（Excel导入/导出）
 
-## 项目结构
+### 🌤️ 天气查询
+- 实时天气信息查询
+- 支持城市名称或adcode查询
 
-```
-.
-├── main.py                  # 主程序入口
-├── app/                     # 应用程序包
-│   ├── __init__.py
-│   ├── integrated_tool.py   # 主应用程序类，集成各功能模块
-│   ├── ui/                  # 用户界面模块
-│   │   ├── __init__.py
-│   │   ├── file_path_tool.py        # 文件路径工具UI
-│   │   ├── rename_tool.py           # 重命名工具UI
-│   │   ├── file_organizer_tool.py   # 文件整理工具UI
-│   │   ├── file_sorter_tool.py      # 文件分组工具UI
-│   │   ├── image_gps_extractor_tool.py # 图片GPS信息提取UI
-│   │   ├── video_resizer_tool.py    # 视频压缩工具UI
-│   │   ├── point_matcher_tool.py    # 最近点位匹配工具UI
-│   │   └── image_processor_tool.py  # 图片处理工具UI
-│   └── utils/               # 工具类
-│       ├── __init__.py
-│       ├── file_operations.py       # 文件操作工具
-│       └── theme.py                # 主题管理器
-├── Rename_Template.xlsx      # 重命名模板示例
-├── requirements.txt          # 依赖库列表
-├── pyproject.toml            # 项目配置文件
-├── .python-version           # Python版本配置
-├── .gitignore                # Git忽略文件
-└── README.md                 # 项目说明文档
-```
+### 💾 个人化功能
+- **收藏位置管理**：保存常用位置，快速选择
+- **历史记录**：自动保存查询历史，支持快速重用
+- **配置管理**：个性化设置，包括API密钥、缓存等
+- **快速启动**：一键启动脚本，自动环境配置
 
-## 环境管理
+## 安装和使用
 
-本项目使用uv进行环境管理，确保依赖一致性和可重现性。
+### 前置要求
 
-1. 安装uv（如果尚未安装）：
-   ```
-   pip install uv
-   ```
-2. 安装依赖：
-   ```
-   uv pip install -r requirements.txt
-   # 或者使用pyproject.toml
-   uv pip install -e .
+1. **Python 3.8+**
+2. **uv包管理器** - [安装指南](https://docs.astral.sh/uv/getting-started/installation/)
+3. **高德地图API密钥** - [申请地址](https://console.amap.com/dev/key/app)
+
+### 快速开始
+
+1. **克隆或下载项目**
+   ```bash
+   git clone <repository-url>
+   cd Integrated_Tools
    ```
 
-## 安装与运行
-
-1. 安装依赖（传统方式）：
-   ```
-   pip install -r requirements.txt
+2. **使用快速启动脚本（推荐）**
+   ```bash
+   # Windows
+   start_amap_tool.bat
    ```
    
-   或使用uv（推荐）：
-   ```
-   uv pip install -r requirements.txt
-   ```
+   或手动启动：
+   ```bash
+   # 创建虚拟环境
+   uv venv
    
-2. 运行主程序：
+   # 安装依赖
+   uv pip install -r requirements.txt
+   
+   # 启动应用
+   uv run python main.py
    ```
-   python main.py
-   ```
 
-## 使用说明
+3. **配置API密钥**
+   - 首次启动时会提示输入高德地图API密钥
+   - 也可以在设置中随时修改
 
-1. 启动程序后，选择所需功能模块（如文件路径获取、重命名、整理等）。
-2. 按界面提示操作，如选择文件夹、设置过滤条件、导入Excel等。
-3. 各模块均支持批量操作和结果导出。
+## 使用指南
 
-## 扩展开发
+### 路径规划
 
-- 新功能建议在`app/ui/`目录下新建模块。
-- 在`app/integrated_tool.py`中注册新模块并添加到主界面。
-- 通用工具类建议放在`app/utils/`目录下。
+1. 在"路径规划"标签页中输入起点和终点坐标
+2. 坐标格式：`经度,纬度`（如：`116.397428,39.90923`）
+3. 点击"计算路径"获取结果
+4. 可以使用"收藏位置"按钮快速选择常用位置
 
-## 依赖说明
+### 收藏位置管理
 
-- Python 3.13+
-- tkinter（Python内置）
-- pandas>=1.3.0（数据处理和Excel操作）
-- Pillow>=8.0.0（图像处理）
-- pyperclip>=1.8.0（剪贴板操作）
-- openpyxl>=3.0.0（Excel文件读写）
-- matplotlib>=3.3.0（图表绘制）
-- piexif>=1.1.0（图片EXIF信息处理）
-- geopy>=2.0.0（地理位置计算）
-- numpy>=1.20.0（数值计算）
-- opencv-python>=4.5.0（图像和视频处理）
-- send2trash>=1.8.0（安全删除文件到回收站）
-- requests>=2.25.0（网络请求）
+1. 点击"管理收藏"按钮
+2. 添加新的收藏位置：输入名称和坐标
+3. 删除不需要的收藏位置
+4. 在路径规划时点击"收藏位置"快速选择
 
-## 贡献与反馈
+### 历史记录
 
-欢迎提交Issue或PR，提出建议或反馈问题。
+1. 点击"历史记录"按钮查看所有查询历史
+2. 支持删除单条记录或清空全部
+3. 在位置选择对话框中可以快速重用历史位置
+
+### 设置配置
+
+1. 点击"设置"按钮
+2. 配置API密钥
+3. 调整缓存设置
+4. 设置历史记录保留数量
+
+## 配置文件
+
+应用会自动创建以下配置文件：
+
+- `config/config.yaml` - 主配置文件
+- `config/history.json` - 历史记录文件
+
+### 配置选项
+
+```yaml
+# API设置
+amap_api_key: "your_api_key_here"
+
+# 收藏位置
+favorite_locations:
+  家: "116.397428,39.90923"
+  公司: "116.407526,39.90403"
+
+# 常用城市
+common_cities:
+  - 北京
+  - 上海
+  - 广州
+
+# UI设置
+ui_settings:
+  theme: "light"
+  font_size: 12
+  window_size: "800x600"
+
+# 缓存设置
+cache_enabled: true
+cache_ttl_hours: 24
+
+# 历史记录设置
+max_history_records: 1000
+auto_cleanup_days: 30
+```
+
+## API密钥申请
+
+1. 访问[高德开放平台](https://console.amap.com/dev/key/app)
+2. 注册并登录账号
+3. 创建新应用
+4. 申请"Web服务API"密钥
+5. 将密钥配置到应用中
+
+## 故障排除
+
+### 常见问题
+
+1. **API调用失败**
+   - 检查API密钥是否正确
+   - 确认网络连接正常
+   - 查看API配额是否用完
+
+2. **坐标格式错误**
+   - 确保使用"经度,纬度"格式
+   - 经度范围：-180到180
+   - 纬度范围：-90到90
+
+3. **应用启动失败**
+   - 检查Python版本（需要3.8+）
+   - 确认uv已正确安装
+   - 查看依赖是否完整安装
+
+### 日志查看
+
+应用运行时的错误信息会显示在控制台中，如果遇到问题，请查看控制台输出。
+
+## 开发说明
+
+### 项目结构
+
+```
+Integrated_Tools/
+├── app/
+│   ├── ui/
+│   │   └── amap_tool.py      # 主界面
+│   └── utils/
+│       └── coordinate_converter.py  # 坐标转换
+├── config.py                 # 配置管理
+├── history_manager.py        # 历史记录管理
+├── amap_api.py              # API调用封装
+├── main.py                  # 应用入口
+├── requirements.txt         # 依赖列表
+├── start_amap_tool.bat     # 快速启动脚本
+└── README.md               # 说明文档
+```
+
+### 扩展功能
+
+如需添加新功能，可以：
+
+1. 在`amap_api.py`中添加新的API调用方法
+2. 在`amap_tool.py`中添加对应的UI界面
+3. 更新配置文件结构（如需要）
 
 ## 许可证
 
-本项目采用MIT License。
+本项目仅供个人学习和使用。使用高德地图API需要遵守[高德开放平台服务条款](https://lbs.amap.com/terms)。
+
+## 更新日志
+
+### v2.0.0 (个人优化版)
+- ✨ 新增收藏位置管理功能
+- ✨ 新增历史记录功能
+- ✨ 新增个性化配置管理
+- ✨ 新增真实API调用支持
+- ✨ 新增快速启动脚本
+- 🔧 优化界面布局和用户体验
+- 🔧 改进错误处理和日志记录
+- 📝 完善文档和使用说明
+
+### v1.0.0 (基础版)
+- 基础路径规划功能
+- 地址查询功能
+- 天气查询功能
+- 批量处理功能

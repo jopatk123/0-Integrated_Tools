@@ -1,0 +1,31 @@
+# GUI框架
+tkinter-tooltip>=2.2.0
+
+# HTTP请求
+requests>=2.31.0
+
+# JSON处理（Python内置，但列出以供参考）
+# json - 内置模块
+
+# 时间处理（Python内置）
+# datetime - 内置模块
+
+# 文件操作（Python内置）
+# os - 内置模块
+# pathlib - 内置模块
+
+# 线程处理（Python内置）
+# threading - 内置模块
+
+# Excel文件处理
+openpyxl>=3.1.0
+pandas>=2.0.0
+
+# 配置文件处理
+pyyaml>=6.0
+
+# 数学计算（坐标转换）
+numpy>=1.24.0
+
+# 可选：更好的错误处理和日志
+loguru>=0.7.0
