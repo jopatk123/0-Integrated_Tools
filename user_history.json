@@ -1,5 +1,16 @@
 [
   {
+    "id": "9073bf42",
+    "type": "route_planning",
+    "timestamp": "2025-05-28T06:47:21.217238",
+    "data": {
+      "origin": "116.40367162595768,39.91063350638631",
+      "destination": "116.41376818747571,39.905433308303465",
+      "origin_address": "地址信息：",
+      "destination_address": "地址信息："
+    }
+  },
+  {
     "id": "c037169d",
     "type": "route_planning",
     "timestamp": "2025-05-27T23:30:32.565773",
