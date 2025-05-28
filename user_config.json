@@ -2,14 +2,14 @@
   "amap_api_key": "635698df46a5c6ddf942ddb093ca1738",
   "favorite_locations": [
     {
-      "name": "家",
-      "lng": 116.397428,
-      "lat": 39.90923
+      "name": "铁塔",
+      "lng": 119.35112345,
+      "lat": 25.999265471
     },
     {
-      "name": "公司",
-      "lng": 116.407526,
-      "lat": 39.90403
+      "name": "仓山南江滨大道5号灯杆",
+      "lng": 119.40027,
+      "lat": 26.0096
     }
   ],
   "favorite_cities": [

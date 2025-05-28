@@ -15,7 +15,7 @@ class Config:
         self.config_file = os.path.join(os.path.dirname(__file__), 'user_config.json')
         self.default_config = {
             # API配置
-            'amap_api_key': '635698df46a5c6ddf942ddb093ca1738',  # 高德地图API密钥
+            'amap_api_key':'635698df46a5c6ddf942ddb093ca1738',  # 高德地图API密钥
             
             # 个人偏好设置
             'favorite_locations': [

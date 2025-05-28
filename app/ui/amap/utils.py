@@ -136,12 +136,20 @@ def show_history_window(parent, history_manager, theme):
         messagebox.showerror("错误", f"显示历史记录失败: {str(e)}")
 
 
-def show_favorites_window(parent, favorite_manager, theme):
-    """显示收藏管理窗口"""
+def show_favorites_window(parent, favorite_manager, theme, callback=None):
+    """显示收藏管理窗口
+    
+    Args:
+        parent: 父窗口
+        favorite_manager: 收藏管理器
+        theme: 主题
+        callback: 选择收藏位置后的回调函数，接收坐标字符串参数
+    """
     try:
         # 创建收藏管理窗口
         favorites_window = tk.Toplevel(parent)
-        favorites_window.title("管理收藏位置")
+        window_title = "选择收藏位置" if callback else "收藏管理"
+        favorites_window.title(window_title)
         favorites_window.geometry("500x400")
         favorites_window.transient(parent)
         
@@ -217,7 +225,25 @@ def show_favorites_window(parent, favorite_manager, theme):
                     favorite_manager.remove_favorite(name)
                     load_favorites()
         
-        tk.Button(button_frame, text="删除选中", command=delete_selected).pack(side=tk.LEFT, padx=5)
+        def select_favorite():
+            """选择收藏位置并返回坐标"""
+            selection = favorites_listbox.curselection()
+            if selection:
+                text = favorites_listbox.get(selection[0])
+                # 提取坐标部分 (格式: "名称: 经度,纬度")
+                coords = text.split(': ')[1]
+                if callback:
+                    callback(coords)
+                favorites_window.destroy()
+            else:
+                messagebox.showwarning("警告", "请先选择一个收藏位置")
+        
+        # 根据是否有callback决定显示哪些按钮
+        if callback:
+            tk.Button(button_frame, text="选择", command=select_favorite).pack(side=tk.LEFT, padx=5)
+        else:
+            tk.Button(button_frame, text="删除选中", command=delete_selected).pack(side=tk.LEFT, padx=5)
+        
         tk.Button(button_frame, text="关闭", command=favorites_window.destroy).pack(side=tk.RIGHT, padx=5)
         
     except Exception as e:

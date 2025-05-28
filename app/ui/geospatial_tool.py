@@ -7,6 +7,7 @@ from config import config
 from .geospatial.dialogs import ConfigDialog
 from .geospatial.poi_search_tab import POISearchTab
 from .geospatial.conversion_tab import ConversionTab
+from .amap.utils import FavoriteManager, show_favorites_window
 
 class GeospatialTool:
     """地理空间工具主类 - 重构后的版本"""
@@ -18,6 +19,9 @@ class GeospatialTool:
         
         # 初始化配置
         self.config = config
+        
+        # 初始化收藏管理器
+        self.favorite_manager = FavoriteManager(self.config)
         
         # 检查API密钥
         self.check_api_key()
@@ -100,6 +104,18 @@ class GeospatialTool:
         button_frame = tk.Frame(status_frame, bg=self.theme.bg_color)
         button_frame.pack(side=tk.RIGHT, padx=5, pady=2)
         
+        # 收藏管理按钮
+        favorites_btn = tk.Button(
+            button_frame, 
+            text="⭐ 收藏", 
+            command=self.manage_favorites,
+            font=("微软雅黑", 8), 
+            relief=tk.FLAT,
+            bg=self.theme.bg_color, 
+            fg=self.theme.accent_color
+        )
+        favorites_btn.pack(side=tk.LEFT, padx=2)
+        
         # 配置管理按钮
         config_btn = tk.Button(
             button_frame, 
@@ -128,6 +144,14 @@ class GeospatialTool:
         """更新状态栏"""
         self.status_text.set(message)
         self.parent.update_idletasks()
+    
+    def manage_favorites(self):
+        """管理收藏位置"""
+        show_favorites_window(self.parent, self.favorite_manager, self.theme)
+        # 更新POI搜索标签页的收藏位置下拉框
+        if hasattr(self.poi_search_tab, 'update_favorite_locations'):
+            self.poi_search_tab.update_favorite_locations()
+        self.update_status("收藏位置已更新")
     
     def show_config(self):
         """显示配置对话框"""

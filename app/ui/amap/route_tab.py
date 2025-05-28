@@ -386,8 +386,22 @@ class RouteTab:
     
     def show_favorite_locations(self, entry_type):
         """显示收藏位置选择对话框"""
-        # TODO: 实现收藏位置功能
-        messagebox.showinfo("提示", "收藏位置功能待实现")
+        def on_location_selected(coords):
+            """当选择收藏位置后的回调函数"""
+            try:
+                if entry_type == 'origin':
+                    self.origin_entry.delete(0, tk.END)
+                    self.origin_entry.insert(0, coords)
+                elif entry_type == 'destination':
+                    self.destination_entry.delete(0, tk.END)
+                    self.destination_entry.insert(0, coords)
+            except Exception as e:
+                messagebox.showerror("错误", f"设置坐标失败: {str(e)}")
+        
+        try:
+            show_favorites_window(self.parent, self.favorite_manager, self.theme, callback=on_location_selected)
+        except Exception as e:
+            messagebox.showerror("错误", f"打开收藏位置失败: {str(e)}")
     
     def show_history(self):
         """显示历史记录"""
@@ -396,8 +410,7 @@ class RouteTab:
     
     def manage_favorites(self):
         """管理收藏位置"""
-        # TODO: 实现收藏管理功能
-        messagebox.showinfo("提示", "收藏管理功能待实现")
+        show_favorites_window(self.parent, self.favorite_manager, self.theme)
     
     def show_settings(self):
         """显示设置"""
