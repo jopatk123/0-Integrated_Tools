@@ -11,6 +11,7 @@ from app.ui.image_processor_tool import ImageProcessorTool
 from app.ui.excel_image_extractor_tool import ExcelImageExtractorTool
 from app.ui.geospatial_tool import GeoSpatialApp # Import the new tool
 from app.ui.amap_tool import AmapTool # Import the Amap tool
+from app.ui.format_converter_tool import FormatConverterTool # Import the format converter tool
 from app.utils.theme import ThemeManager
 
 class IntegratedTool:
@@ -53,6 +54,7 @@ class IntegratedTool:
         self.excel_image_extractor_frame = ttk.Frame(self.notebook)
         self.geospatial_tool_frame = ttk.Frame(self.notebook) # Create a frame for the new tool
         self.amap_tool_frame = ttk.Frame(self.notebook) # Create a frame for the Amap tool
+        self.format_converter_frame = ttk.Frame(self.notebook) # Create a frame for the format converter tool
         
         # 添加选项卡
         self.notebook.add(self.file_path_frame, text="文件路径获取")
@@ -66,6 +68,7 @@ class IntegratedTool:
         self.notebook.add(self.excel_image_extractor_frame, text="Excel图片提取")
         self.notebook.add(self.geospatial_tool_frame, text="地理空间工具") # Add a tab for the new tool
         self.notebook.add(self.amap_tool_frame, text="高德地图工具") # Add a tab for the Amap tool
+        self.notebook.add(self.format_converter_frame, text="格式转换工具") # Add a tab for the format converter tool
         
         # 初始化重命名工具界面 - 必须在创建选项卡后初始化
         self.rename_tool = RenameTool(self.rename_frame, self.theme)
@@ -96,3 +99,6 @@ class IntegratedTool:
         
         # Initialize the Amap tool
         self.amap_tool = AmapTool(self.amap_tool_frame, self.theme) # Initialize the Amap tool
+        
+        # Initialize the format converter tool
+        self.format_converter_tool = FormatConverterTool(self.format_converter_frame, self.theme) # Initialize the format converter tool
