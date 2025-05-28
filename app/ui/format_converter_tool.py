@@ -317,6 +317,118 @@ class FormatConverterTool:
                 html_lines.append('<br>')
                 
         return '\n'.join(html_lines)
+    
+    def enhanced_md_to_html(self, md_content):
+        """增强的Markdown到HTML转换"""
+        lines = md_content.split('\n')
+        html_lines = []
+        in_code_block = False
+        in_table = False
+        table_lines = []
+        
+        for line in lines:
+            original_line = line
+            line = line.strip()
+            
+            # 处理代码块
+            if line.startswith('```'):
+                if in_code_block:
+                    html_lines.append('</code></pre>')
+                    in_code_block = False
+                else:
+                    lang = line[3:].strip() if len(line) > 3 else ''
+                    html_lines.append(f'<pre><code class="language-{lang}">')
+                    in_code_block = True
+                continue
+                
+            if in_code_block:
+                html_lines.append(html.escape(original_line) if html else original_line)
+                continue
+            
+            # 处理表格
+            if '|' in line and line.count('|') >= 2:
+                if not in_table:
+                    in_table = True
+                    table_lines = []
+                table_lines.append(line)
+                continue
+            elif in_table:
+                # 结束表格处理
+                html_lines.extend(self.convert_table_to_html(table_lines))
+                in_table = False
+                table_lines = []
+            
+            # 处理其他Markdown语法
+            if line.startswith('# '):
+                html_lines.append(f'<h1>{self.process_inline_formatting(line[2:])}</h1>')
+            elif line.startswith('## '):
+                html_lines.append(f'<h2>{self.process_inline_formatting(line[3:])}</h2>')
+            elif line.startswith('### '):
+                html_lines.append(f'<h3>{self.process_inline_formatting(line[4:])}</h3>')
+            elif line.startswith('#### '):
+                html_lines.append(f'<h4>{self.process_inline_formatting(line[5:])}</h4>')
+            elif line.startswith('##### '):
+                html_lines.append(f'<h5>{self.process_inline_formatting(line[6:])}</h5>')
+            elif line.startswith('###### '):
+                html_lines.append(f'<h6>{self.process_inline_formatting(line[7:])}</h6>')
+            elif line.startswith('- ') or line.startswith('* '):
+                html_lines.append(f'<li>{self.process_inline_formatting(line[2:])}</li>')
+            elif line.startswith('> '):
+                html_lines.append(f'<blockquote>{self.process_inline_formatting(line[2:])}</blockquote>')
+            elif line:
+                html_lines.append(f'<p>{self.process_inline_formatting(line)}</p>')
+            else:
+                html_lines.append('<br>')
+        
+        # 处理未结束的表格
+        if in_table and table_lines:
+            html_lines.extend(self.convert_table_to_html(table_lines))
+                
+        return '\n'.join(html_lines)
+    
+    def process_inline_formatting(self, text):
+        """处理行内格式化"""
+        if not re:
+            return text
+            
+        # 处理粗体
+        text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', text)
+        # 处理斜体
+        text = re.sub(r'\*(.*?)\*', r'<em>\1</em>', text)
+        # 处理行内代码
+        text = re.sub(r'`(.*?)`', r'<code>\1</code>', text)
+        # 处理链接
+        text = re.sub(r'\[([^\]]+)\]\(([^\)]+)\)', r'<a href="\2">\1</a>', text)
+        
+        return text
+    
+    def convert_table_to_html(self, table_lines):
+        """将Markdown表格转换为HTML"""
+        if len(table_lines) < 2:
+            return []
+            
+        html_lines = ['<table>']
+        
+        # 处理表头
+        header_line = table_lines[0]
+        headers = [cell.strip() for cell in header_line.split('|')[1:-1]]
+        html_lines.append('<thead><tr>')
+        for header in headers:
+            html_lines.append(f'<th>{self.process_inline_formatting(header)}</th>')
+        html_lines.append('</tr></thead>')
+        
+        # 处理数据行
+        html_lines.append('<tbody>')
+        for line in table_lines[2:]:  # 跳过分隔行
+            if '|' in line:
+                cells = [cell.strip() for cell in line.split('|')[1:-1]]
+                html_lines.append('<tr>')
+                for cell in cells:
+                    html_lines.append(f'<td>{self.process_inline_formatting(cell)}</td>')
+                html_lines.append('</tr>')
+        html_lines.append('</tbody></table>')
+        
+        return html_lines
         
     def html_to_docx(self, soup, doc):
         """将HTML内容转换为Word文档"""
@@ -384,3 +496,210 @@ class FormatConverterTool:
                 md_lines.append(text)
                 
         return '\n\n'.join(md_lines)
+    
+    def setup_document_styles(self, doc):
+        """设置Word文档样式"""
+        try:
+            from docx.shared import Pt, RGBColor
+            from docx.enum.text import WD_ALIGN_PARAGRAPH
+            
+            # 设置默认字体
+            style = doc.styles['Normal']
+            font = style.font
+            font.name = '微软雅黑'
+            font.size = Pt(11)
+            
+        except ImportError:
+            pass  # 如果没有相关模块，跳过样式设置
+    
+    def enhanced_html_to_docx(self, soup, doc):
+        """增强的HTML到Word文档转换"""
+        for element in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'li', 'blockquote', 'table', 'pre']):
+            if element.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
+                level = int(element.name[1])
+                text = self.extract_formatted_text(element)
+                doc.add_heading(text, level=level)
+                
+            elif element.name == 'p':
+                text = self.extract_formatted_text(element)
+                if text.strip():
+                    paragraph = doc.add_paragraph()
+                    self.add_formatted_text_to_paragraph(paragraph, element)
+                    
+            elif element.name == 'li':
+                text = self.extract_formatted_text(element)
+                doc.add_paragraph(text, style='List Bullet')
+                
+            elif element.name == 'blockquote':
+                text = self.extract_formatted_text(element)
+                paragraph = doc.add_paragraph(text)
+                # 设置引用样式
+                try:
+                    from docx.shared import Inches
+                    paragraph.paragraph_format.left_indent = Inches(0.5)
+                except ImportError:
+                    pass
+                    
+            elif element.name == 'table' and self.include_tables.get():
+                self.add_table_to_docx(element, doc)
+                
+            elif element.name == 'pre':
+                code_text = element.get_text()
+                paragraph = doc.add_paragraph(code_text)
+                # 设置代码样式
+                try:
+                    run = paragraph.runs[0]
+                    run.font.name = 'Consolas'
+                except (IndexError, AttributeError):
+                    pass
+    
+    def extract_formatted_text(self, element):
+        """提取带格式的文本"""
+        return element.get_text().strip()
+    
+    def add_formatted_text_to_paragraph(self, paragraph, element):
+        """向段落添加格式化文本"""
+        for content in element.contents:
+            if hasattr(content, 'name'):
+                if content.name == 'strong' or content.name == 'b':
+                    run = paragraph.add_run(content.get_text())
+                    run.bold = True
+                elif content.name == 'em' or content.name == 'i':
+                    run = paragraph.add_run(content.get_text())
+                    run.italic = True
+                elif content.name == 'code':
+                    run = paragraph.add_run(content.get_text())
+                    try:
+                        run.font.name = 'Consolas'
+                    except AttributeError:
+                        pass
+                else:
+                    paragraph.add_run(content.get_text())
+            else:
+                paragraph.add_run(str(content))
+    
+    def add_table_to_docx(self, table_element, doc):
+        """向Word文档添加表格"""
+        rows = table_element.find_all('tr')
+        if not rows:
+            return
+            
+        # 计算列数
+        max_cols = max(len(row.find_all(['td', 'th'])) for row in rows)
+        
+        # 创建表格
+        table = doc.add_table(rows=len(rows), cols=max_cols)
+        table.style = 'Table Grid'
+        
+        for i, row in enumerate(rows):
+            cells = row.find_all(['td', 'th'])
+            for j, cell in enumerate(cells):
+                if j < max_cols:
+                    table.cell(i, j).text = cell.get_text().strip()
+    
+    def enhanced_text_to_docx(self, text, doc):
+        """增强的文本到Word文档转换"""
+        lines = text.split('\n')
+        in_code_block = False
+        
+        for line in lines:
+            original_line = line
+            line = line.strip()
+            
+            # 处理代码块
+            if line.startswith('```'):
+                in_code_block = not in_code_block
+                continue
+                
+            if in_code_block:
+                paragraph = doc.add_paragraph(original_line)
+                try:
+                    run = paragraph.runs[0] if paragraph.runs else paragraph.add_run(original_line)
+                    run.font.name = 'Consolas'
+                except (IndexError, AttributeError):
+                    pass
+                continue
+            
+            # 处理其他格式
+            if line.startswith('# '):
+                doc.add_heading(line[2:], level=1)
+            elif line.startswith('## '):
+                doc.add_heading(line[3:], level=2)
+            elif line.startswith('### '):
+                doc.add_heading(line[4:], level=3)
+            elif line.startswith('#### '):
+                doc.add_heading(line[5:], level=4)
+            elif line.startswith('##### '):
+                doc.add_heading(line[6:], level=5)
+            elif line.startswith('###### '):
+                doc.add_heading(line[7:], level=6)
+            elif line.startswith('- ') or line.startswith('* '):
+                doc.add_paragraph(line[2:], style='List Bullet')
+            elif line.startswith('> '):
+                paragraph = doc.add_paragraph(line[2:])
+                try:
+                    from docx.shared import Inches
+                    paragraph.paragraph_format.left_indent = Inches(0.5)
+                except ImportError:
+                    pass
+            elif line:
+                doc.add_paragraph(line)
+    
+    def preview_conversion(self):
+        """预览转换结果"""
+        if not self.validate_inputs():
+            return
+            
+        try:
+            source_file = self.source_path_var.get().strip()
+            direction = self.conversion_direction.get()
+            
+            # 创建预览窗口
+            preview_window = tk.Toplevel(self.parent_frame)
+            preview_window.title("转换预览")
+            preview_window.geometry("800x600")
+            
+            # 创建文本框显示预览内容
+            text_frame = tk.Frame(preview_window)
+            text_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+            
+            text_widget = tk.Text(text_frame, wrap=tk.WORD)
+            scrollbar = tk.Scrollbar(text_frame, orient=tk.VERTICAL, command=text_widget.yview)
+            text_widget.configure(yscrollcommand=scrollbar.set)
+            
+            text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            
+            # 生成预览内容
+            if direction == "md_to_docx":
+                with open(source_file, 'r', encoding='utf-8') as f:
+                    md_content = f.read()
+                
+                preview_content = "Markdown 内容预览:\n\n" + md_content[:2000]
+                if len(md_content) > 2000:
+                    preview_content += "\n\n... (内容过长，仅显示前2000字符)"
+                    
+            else:  # docx_to_md
+                doc = Document(source_file)
+                preview_content = "Word 文档内容预览:\n\n"
+                
+                char_count = 0
+                for paragraph in doc.paragraphs:
+                    text = paragraph.text.strip()
+                    if text:
+                        preview_content += text + "\n\n"
+                        char_count += len(text)
+                        if char_count > 2000:
+                            preview_content += "... (内容过长，仅显示部分内容)"
+                            break
+            
+            text_widget.insert(tk.END, preview_content)
+            text_widget.config(state=tk.DISABLED)
+            
+            # 添加关闭按钮
+            close_btn = tk.Button(preview_window, text="关闭", 
+                                command=preview_window.destroy)
+            close_btn.pack(pady=10)
+            
+        except Exception as e:
+            messagebox.showerror("预览错误", f"无法生成预览：{str(e)}")
