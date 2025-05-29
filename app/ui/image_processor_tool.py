@@ -4,6 +4,8 @@ from PIL import Image, ImageTk
 import threading
 import queue
 import os
+import random
+import math
 
 class ImageProcessorTool:
     def __init__(self, parent_frame, theme):
@@ -19,94 +21,122 @@ class ImageProcessorTool:
     
     def setup_ui(self):
         # 创建主框架
-        main_frame = ttk.Frame(self.parent_frame, padding="10")
+        main_frame = ttk.Frame(self.parent_frame, padding="5")
         main_frame.pack(fill=tk.BOTH, expand=True)
         
-        # 左侧控制面板
-        control_frame = ttk.LabelFrame(main_frame, text="控制面板", padding="10")
-        control_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
+        # 左侧控制面板 - 使用更紧凑的布局
+        control_frame = ttk.LabelFrame(main_frame, text="控制面板", padding="5")
+        control_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 5))
+        control_frame.configure(width=280)  # 固定宽度
         
-        # 文件夹选择
-        folder_frame = ttk.Frame(control_frame)
-        folder_frame.pack(fill=tk.X, pady=(0, 10))
+        # 文件夹选择区域 - 紧凑布局
+        folder_frame = ttk.LabelFrame(control_frame, text="文件选择", padding="5")
+        folder_frame.pack(fill=tk.X, pady=(0, 5))
         
-        ttk.Label(folder_frame, text="选择文件夹：").pack(anchor=tk.W)
-        
+        # 文件夹路径
         folder_select_frame = ttk.Frame(folder_frame)
-        folder_select_frame.pack(fill=tk.X, pady=5)
-        
+        folder_select_frame.pack(fill=tk.X, pady=2)
         self.folder_path = tk.StringVar()
-        ttk.Entry(folder_select_frame, textvariable=self.folder_path).pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Button(folder_select_frame, text="浏览", command=self.browse_folder).pack(side=tk.RIGHT, padx=(5, 0))
+        ttk.Entry(folder_select_frame, textvariable=self.folder_path, font=('Arial', 8)).pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Button(folder_select_frame, text="浏览", command=self.browse_folder, width=6).pack(side=tk.RIGHT, padx=(2, 0))
         
-        # 包含子文件夹选项
+        # 选项和加载按钮在同一行
+        options_frame = ttk.Frame(folder_frame)
+        options_frame.pack(fill=tk.X, pady=2)
         self.include_subfolders = tk.BooleanVar(value=True)
-        ttk.Checkbutton(folder_frame, text="包含子文件夹", variable=self.include_subfolders).pack(anchor=tk.W)
+        ttk.Checkbutton(options_frame, text="含子文件夹", variable=self.include_subfolders).pack(side=tk.LEFT)
+        ttk.Button(options_frame, text="加载图片", command=self.load_images, width=8).pack(side=tk.RIGHT)
         
-        ttk.Button(folder_frame, text="加载图片", command=self.load_images).pack(fill=tk.X, pady=(5, 0))
+        # 使用选项卡来组织功能
+        notebook = ttk.Notebook(control_frame)
+        notebook.pack(fill=tk.BOTH, expand=True, pady=5)
         
-        # 尺寸调整
-        resize_frame = ttk.LabelFrame(control_frame, text="调整尺寸", padding="10")
-        resize_frame.pack(fill=tk.X, pady=10)
+        # 基础处理选项卡
+        basic_frame = ttk.Frame(notebook, padding="5")
+        notebook.add(basic_frame, text="基础处理")
         
-        width_frame = ttk.Frame(resize_frame)
-        width_frame.pack(fill=tk.X, pady=5)
-        ttk.Label(width_frame, text="宽度：").pack(side=tk.LEFT)
+        # 尺寸调整 - 紧凑布局
+        resize_frame = ttk.LabelFrame(basic_frame, text="尺寸调整", padding="5")
+        resize_frame.pack(fill=tk.X, pady=(0, 5))
+        
+        size_frame = ttk.Frame(resize_frame)
+        size_frame.pack(fill=tk.X, pady=2)
+        ttk.Label(size_frame, text="宽:", width=3).pack(side=tk.LEFT)
         self.width_var = tk.StringVar()
-        ttk.Entry(width_frame, textvariable=self.width_var, width=10).pack(side=tk.LEFT, padx=(5, 0))
-        
-        height_frame = ttk.Frame(resize_frame)
-        height_frame.pack(fill=tk.X, pady=5)
-        ttk.Label(height_frame, text="高度：").pack(side=tk.LEFT)
+        ttk.Entry(size_frame, textvariable=self.width_var, width=8, font=('Arial', 8)).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Label(size_frame, text="高:", width=3).pack(side=tk.LEFT)
         self.height_var = tk.StringVar()
-        ttk.Entry(height_frame, textvariable=self.height_var, width=10).pack(side=tk.LEFT, padx=(5, 0))
+        ttk.Entry(size_frame, textvariable=self.height_var, width=8, font=('Arial', 8)).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(size_frame, text="调整", command=self.resize_images, width=6).pack(side=tk.RIGHT)
         
-        ttk.Button(resize_frame, text="调整尺寸", command=self.resize_images).pack(fill=tk.X, pady=(5, 0))
+        # 裁剪设置 - 紧凑布局
+        crop_frame = ttk.LabelFrame(basic_frame, text="裁剪设置", padding="5")
+        crop_frame.pack(fill=tk.X, pady=(0, 5))
         
-        # 裁剪设置
-        crop_frame = ttk.LabelFrame(control_frame, text="裁剪设置", padding="10")
-        crop_frame.pack(fill=tk.X, pady=10)
-        
-        pixels_frame = ttk.Frame(crop_frame)
-        pixels_frame.pack(fill=tk.X, pady=5)
-        ttk.Label(pixels_frame, text="裁剪像素：").pack(side=tk.LEFT)
+        crop_input_frame = ttk.Frame(crop_frame)
+        crop_input_frame.pack(fill=tk.X, pady=2)
+        ttk.Label(crop_input_frame, text="像素:", width=4).pack(side=tk.LEFT)
         self.crop_pixels = tk.StringVar(value="100")
-        ttk.Entry(pixels_frame, textvariable=self.crop_pixels, width=10).pack(side=tk.LEFT, padx=(5, 0))
+        ttk.Entry(crop_input_frame, textvariable=self.crop_pixels, width=8, font=('Arial', 8)).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(crop_input_frame, text="裁剪", command=self.crop_images, width=6).pack(side=tk.RIGHT)
         
-        # 裁剪方式
+        # 裁剪方式 - 水平布局
+        crop_mode_frame = ttk.Frame(crop_frame)
+        crop_mode_frame.pack(fill=tk.X, pady=2)
         self.crop_mode = tk.StringVar(value="bottom")
-        ttk.Radiobutton(crop_frame, text="从底部裁剪", variable=self.crop_mode, value="bottom").pack(anchor=tk.W)
-        ttk.Radiobutton(crop_frame, text="从顶部裁剪", variable=self.crop_mode, value="top").pack(anchor=tk.W)
+        ttk.Radiobutton(crop_mode_frame, text="底部", variable=self.crop_mode, value="bottom").pack(side=tk.LEFT)
+        ttk.Radiobutton(crop_mode_frame, text="顶部", variable=self.crop_mode, value="top").pack(side=tk.LEFT, padx=(10, 0))
         
-        ttk.Button(crop_frame, text="裁剪图片", command=self.crop_images).pack(fill=tk.X, pady=(5, 0))
+        # 高级处理选项卡
+        advanced_frame = ttk.Frame(notebook, padding="5")
+        notebook.add(advanced_frame, text="高级处理")
         
-        # 压缩设置
-        compress_frame = ttk.LabelFrame(control_frame, text="批量压缩", padding="10")
-        compress_frame.pack(fill=tk.X, pady=10)
+        # 随机旋转设置 - 紧凑布局
+        rotate_frame = ttk.LabelFrame(advanced_frame, text="随机旋转", padding="5")
+        rotate_frame.pack(fill=tk.X, pady=(0, 5))
+        
+        angle_input_frame = ttk.Frame(rotate_frame)
+        angle_input_frame.pack(fill=tk.X, pady=2)
+        ttk.Label(angle_input_frame, text="最小:", width=4).pack(side=tk.LEFT)
+        self.min_angle_var = tk.StringVar(value="-5")
+        ttk.Entry(angle_input_frame, textvariable=self.min_angle_var, width=6, font=('Arial', 8)).pack(side=tk.LEFT, padx=(0, 3))
+        ttk.Label(angle_input_frame, text="最大:", width=4).pack(side=tk.LEFT)
+        self.max_angle_var = tk.StringVar(value="5")
+        ttk.Entry(angle_input_frame, textvariable=self.max_angle_var, width=6, font=('Arial', 8)).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(angle_input_frame, text="旋转", command=self.random_rotate_images, width=6).pack(side=tk.RIGHT)
+        
+        ttk.Label(rotate_frame, text="角度范围: -10° ~ +10°", font=('Arial', 7)).pack(pady=2)
+        
+        # 压缩设置 - 紧凑布局
+        compress_frame = ttk.LabelFrame(advanced_frame, text="批量压缩", padding="5")
+        compress_frame.pack(fill=tk.X, pady=(0, 5))
         
         quality_frame = ttk.Frame(compress_frame)
-        quality_frame.pack(fill=tk.X, pady=5)
-        ttk.Label(quality_frame, text="压缩率(1-100)：").pack(side=tk.LEFT)
+        quality_frame.pack(fill=tk.X, pady=2)
+        ttk.Label(quality_frame, text="质量:", width=4).pack(side=tk.LEFT)
         self.quality_var = tk.StringVar(value="85")
-        ttk.Entry(quality_frame, textvariable=self.quality_var, width=10).pack(side=tk.LEFT, padx=(5, 0))
+        ttk.Entry(quality_frame, textvariable=self.quality_var, width=8, font=('Arial', 8)).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(quality_frame, text="压缩", command=self.compress_images, width=6).pack(side=tk.RIGHT)
         
         # 覆盖原图选项
         self.overwrite_original = tk.BooleanVar(value=False)
-        ttk.Checkbutton(compress_frame, text="覆盖原图", variable=self.overwrite_original).pack(anchor=tk.W)
+        ttk.Checkbutton(compress_frame, text="覆盖原图", variable=self.overwrite_original).pack(pady=2)
         
-        ttk.Button(compress_frame, text="批量压缩", command=self.compress_images).pack(fill=tk.X, pady=(5, 0))
+        # 输出选项卡
+        output_frame = ttk.Frame(notebook, padding="5")
+        notebook.add(output_frame, text="输出设置")
         
-        # 保存设置
-        save_frame = ttk.LabelFrame(control_frame, text="保存设置", padding="10")
-        save_frame.pack(fill=tk.X, pady=10)
+        # 保存设置 - 紧凑布局
+        save_frame = ttk.LabelFrame(output_frame, text="保存路径", padding="5")
+        save_frame.pack(fill=tk.X, pady=(0, 5))
         
         self.save_path = tk.StringVar()
         save_path_frame = ttk.Frame(save_frame)
-        save_path_frame.pack(fill=tk.X, pady=5)
-        ttk.Entry(save_path_frame, textvariable=self.save_path).pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Button(save_path_frame, text="浏览", command=self.browse_save_folder).pack(side=tk.RIGHT, padx=(5, 0))
+        save_path_frame.pack(fill=tk.X, pady=2)
+        ttk.Entry(save_path_frame, textvariable=self.save_path, font=('Arial', 8)).pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Button(save_path_frame, text="浏览", command=self.browse_save_folder, width=6).pack(side=tk.RIGHT, padx=(2, 0))
         
-        ttk.Button(save_frame, text="保存图片", command=self.save_images).pack(fill=tk.X, pady=(5, 0))
+        ttk.Button(save_frame, text="保存所有图片", command=self.save_images).pack(fill=tk.X, pady=(5, 0))
         
         # 右侧图片预览区域
         preview_frame = ttk.LabelFrame(main_frame, text="图片预览", padding="10")
@@ -351,6 +381,100 @@ class ImageProcessorTool:
     def _update_after_process(self, message):
         self.status_var.set(message)
         self.display_current_image()
+        
+    def random_rotate_images(self):
+        """批量随机旋转图片"""
+        if not self.processed_images:
+            messagebox.showerror("错误", "没有加载图片")
+            return
+        
+        try:
+            min_angle = float(self.min_angle_var.get())
+            max_angle = float(self.max_angle_var.get())
+            
+            # 验证角度范围
+            if min_angle < -10 or min_angle > 10 or max_angle < -10 or max_angle > 10:
+                messagebox.showerror("错误", "角度范围必须在-10到+10度之间")
+                return
+            
+            if min_angle > max_angle:
+                messagebox.showerror("错误", "最小角度不能大于最大角度")
+                return
+            
+            self.status_var.set("正在随机旋转图片...")
+            threading.Thread(target=self._random_rotate_images_thread, args=(min_angle, max_angle), daemon=True).start()
+            
+        except ValueError:
+            messagebox.showerror("错误", "请输入有效的角度数字")
+    
+    def _random_rotate_images_thread(self, min_angle, max_angle):
+        """在后台线程中随机旋转图片"""
+        total_images = len(self.processed_images)
+        processed_count = 0
+        
+        for img_data in self.processed_images:
+            try:
+                img = img_data['image']
+                
+                # 生成随机角度
+                random_angle = random.uniform(min_angle, max_angle)
+                
+                # 旋转图片
+                rotated_img = self._rotate_and_crop_image(img, random_angle)
+                img_data['image'] = rotated_img
+                processed_count += 1
+                
+                # 每处理5张图片更新一次状态
+                if processed_count % 5 == 0:
+                    self.parent_frame.after(0, lambda count=processed_count: 
+                                   self.status_var.set(f"正在旋转图片... {count}/{total_images}"))
+                
+            except Exception as e:
+                print(f"旋转图片失败: {e}")
+        
+        # 更新UI
+        self.parent_frame.after(0, lambda: self._update_after_process(f"随机旋转完成: 成功处理 {processed_count} 张图片"))
+    
+    def _rotate_and_crop_image(self, img, angle):
+        """旋转图片并裁剪掉空白区域"""
+        # 转换角度为弧度
+        angle_rad = math.radians(angle)
+        
+        # 获取原始尺寸
+        width, height = img.size
+        
+        # 旋转图片（使用白色背景填充）
+        rotated = img.rotate(angle, expand=True, fillcolor='white')
+        
+        # 计算旋转后的有效区域（去除空白边缘）
+        # 对于小角度旋转，我们可以计算出内接矩形的尺寸
+        cos_a = abs(math.cos(angle_rad))
+        sin_a = abs(math.sin(angle_rad))
+        
+        # 计算内接矩形的尺寸
+        new_width = int(width * cos_a + height * sin_a)
+        new_height = int(width * sin_a + height * cos_a)
+        
+        # 计算裁剪区域，确保去除旋转产生的空白边缘
+        # 使用更保守的裁剪策略
+        crop_width = int(min(width * cos_a - height * sin_a, height * cos_a - width * sin_a))
+        crop_height = int(min(height * cos_a - width * sin_a, width * cos_a - height * sin_a))
+        
+        # 确保裁剪尺寸为正数且不超过原图尺寸
+        crop_width = max(1, min(crop_width, width))
+        crop_height = max(1, min(crop_height, height))
+        
+        # 计算裁剪框的位置（居中裁剪）
+        rotated_width, rotated_height = rotated.size
+        left = (rotated_width - crop_width) // 2
+        top = (rotated_height - crop_height) // 2
+        right = left + crop_width
+        bottom = top + crop_height
+        
+        # 裁剪图片
+        cropped = rotated.crop((left, top, right, bottom))
+        
+        return cropped
         
     def compress_images(self):
         """批量压缩图片"""
