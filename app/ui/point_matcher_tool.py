@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import pandas as pd
+import numpy as np
 import os
 from math import radians, sin, cos, sqrt, atan2
 
@@ -21,6 +22,30 @@ def haversine_distance(lat1, lon1, lat2, lon2):
     distance = r * c
     
     return distance
+
+def haversine_distance_vectorized(lat1, lon1, lat2_array, lon2_array):
+    """
+    向量化的Haversine距离计算，一次计算一个点到多个点的距离
+    lat1, lon1: 单个点的经纬度
+    lat2_array, lon2_array: 多个点的经纬度数组
+    返回距离数组
+    """
+    # 将经纬度转换为弧度
+    lat1_rad = np.radians(lat1)
+    lon1_rad = np.radians(lon1)
+    lat2_rad = np.radians(lat2_array)
+    lon2_rad = np.radians(lon2_array)
+    
+    # Haversine公式的向量化计算
+    dlon = lon2_rad - lon1_rad
+    dlat = lat2_rad - lat1_rad
+    
+    a = np.sin(dlat/2)**2 + np.cos(lat1_rad) * np.cos(lat2_rad) * np.sin(dlon/2)**2
+    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1-a))
+    r = 6371000  # 地球半径（米）
+    distances = r * c
+    
+    return distances
 
 class PointMatcherTool:
     def __init__(self, parent_frame, theme):
@@ -281,36 +306,33 @@ class PointMatcherTool:
             result_df['最近距离(米)'] = 0.0
             
             self.log(f"正在计算{len(point_df)}个点位的最近匹配...")
+            self.log("使用优化算法进行向量化计算，大幅提升计算速度...")
             
-            # 为Point表中的每个点找到Data表中最近的点
+            # 提取基准点位的经纬度数组
+            data_lats = data_df['纬度'].values
+            data_lons = data_df['经度'].values
+            data_names = data_df['点位名称'].values
+            
+            # 为Point表中的每个点找到Data表中最近的点（使用向量化计算）
             for i, point_row in point_df.iterrows():
-                min_distance = float('inf')
-                closest_point = None
-                
                 # 获取当前点的经纬度
                 point_lat = point_row['纬度']
                 point_lon = point_row['经度']
                 
-                # 计算与Data表中所有点的距离
-                for j, data_row in data_df.iterrows():
-                    data_lat = data_row['纬度']
-                    data_lon = data_row['经度']
-                    
-                    # 计算距离
-                    distance = haversine_distance(point_lat, point_lon, data_lat, data_lon)
-                    
-                    # 更新最近点
-                    if distance < min_distance:
-                        min_distance = distance
-                        closest_point = data_row
+                # 使用向量化函数一次计算到所有基准点的距离
+                distances = haversine_distance_vectorized(point_lat, point_lon, data_lats, data_lons)
+                
+                # 找到最小距离的索引
+                min_idx = np.argmin(distances)
+                min_distance = distances[min_idx]
+                closest_name = data_names[min_idx]
                 
                 # 将最近点的信息添加到结果中
-                if closest_point is not None:
-                    result_df.at[i, '最近点位名称'] = closest_point['点位名称']
-                    result_df.at[i, '最近距离(米)'] = min_distance
+                result_df.at[i, '最近点位名称'] = closest_name
+                result_df.at[i, '最近距离(米)'] = min_distance
                 
-                # 更新进度
-                if (i + 1) % 10 == 0 or i == len(point_df) - 1:
+                # 更新进度（减少更新频率以提高性能）
+                if (i + 1) % 50 == 0 or i == len(point_df) - 1:
                     self.log(f"已处理 {i + 1}/{len(point_df)} 个点位")
                     self.parent_frame.update_idletasks()
             
