@@ -30,7 +30,8 @@ class PointMatcherTool:
         # 设置变量
         self.data_file_path = tk.StringVar()
         self.point_file_path = tk.StringVar()
-        self.output_file_path = tk.StringVar(value="Point_with_closest_matches.xlsx")
+        self.output_file_path = tk.StringVar()
+        self.output_dir = tk.StringVar()
         
         # 创建界面
         self.create_widgets()
@@ -50,14 +51,23 @@ class PointMatcherTool:
         
         instructions = (
             "1. 准备两个Excel文件：\n"
-            "   - Data.xlsx：包含基准点位数据（点位编码、点位名称、经度、纬度）\n"
+            "   - Data.xlsx：包含基准点位数据（点位名称、经度、纬度）\n"
             "   - Point.xlsx：包含需要匹配的目标点位数据（点位名称、经度、纬度）\n"
-            "2. 选择这两个文件\n"
-            "3. 点击'开始计算'按钮\n"
-            "4. 结果将保存为Excel文件"
+            "2. 可以下载模板文件作为参考\n"
+            "3. 选择这两个文件\n"
+            "4. 选择输出保存位置\n"
+            "5. 点击'开始计算'按钮\n"
+            "6. 结果将保存为Excel文件"
         )
         instruction_label = ttk.Label(instruction_frame, text=instructions, justify=tk.LEFT)
         instruction_label.pack(anchor=tk.W)
+        
+        # 模板下载按钮
+        template_frame = ttk.Frame(instruction_frame)
+        template_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Button(template_frame, text="下载基准点位模板 (Data.xlsx)", command=self.download_data_template).pack(side=tk.LEFT, padx=5)
+        ttk.Button(template_frame, text="下载目标点位模板 (Point.xlsx)", command=self.download_point_template).pack(side=tk.LEFT, padx=5)
         
         # 文件选择区域
         file_frame = ttk.LabelFrame(main_frame, text="文件选择", padding="10")
@@ -83,8 +93,17 @@ class PointMatcherTool:
         output_file_frame = ttk.Frame(file_frame)
         output_file_frame.pack(fill=tk.X, pady=2)
         
-        ttk.Label(output_file_frame, text="输出文件名:").pack(side=tk.LEFT, padx=5)
-        ttk.Entry(output_file_frame, textvariable=self.output_file_path, width=50).pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        ttk.Label(output_file_frame, text="输出保存位置:").pack(side=tk.LEFT, padx=5)
+        ttk.Entry(output_file_frame, textvariable=self.output_dir, width=50).pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        ttk.Button(output_file_frame, text="选择位置...", command=self.browse_output_dir).pack(side=tk.LEFT, padx=5)
+        
+        # 输出文件名
+        output_name_frame = ttk.Frame(file_frame)
+        output_name_frame.pack(fill=tk.X, pady=2)
+        
+        ttk.Label(output_name_frame, text="输出文件名:").pack(side=tk.LEFT, padx=5)
+        ttk.Entry(output_name_frame, textvariable=self.output_file_path, width=50).pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        self.output_file_path.set("Point_with_closest_matches.xlsx")
         
         # 操作按钮
         button_frame = ttk.Frame(main_frame)
@@ -115,6 +134,10 @@ class PointMatcherTool:
         )
         if filename:
             self.data_file_path.set(filename)
+            # 设置默认输出位置为基准点文件所在目录
+            if not self.output_dir.get():
+                default_dir = os.path.dirname(filename)
+                self.output_dir.set(default_dir)
             self.log(f"已选择基准点位文件: {filename}")
     
     def browse_point_file(self):
@@ -126,6 +149,72 @@ class PointMatcherTool:
             self.point_file_path.set(filename)
             self.log(f"已选择目标点位文件: {filename}")
     
+    def browse_output_dir(self):
+        directory = filedialog.askdirectory(
+            title="选择输出保存位置"
+        )
+        if directory:
+            self.output_dir.set(directory)
+            self.log(f"已选择输出位置: {directory}")
+    
+    def download_data_template(self):
+        """下载基准点位数据模板"""
+        try:
+            # 创建模板数据
+            template_data = {
+                '点位名称': ['基准点1', '基准点2', '基准点3'],
+                '经度': [116.3974, 116.4074, 116.4174],
+                '纬度': [39.9093, 39.9193, 39.9293]
+            }
+            
+            template_df = pd.DataFrame(template_data)
+            
+            # 选择保存位置
+            filename = filedialog.asksaveasfilename(
+                title="保存基准点位模板",
+                defaultextension=".xlsx",
+                filetypes=[("Excel文件", "*.xlsx")],
+                initialfile="Data_template.xlsx"
+            )
+            
+            if filename:
+                template_df.to_excel(filename, index=False)
+                self.log(f"基准点位模板已保存到: {filename}")
+                messagebox.showinfo("成功", f"基准点位模板已保存到: {filename}")
+        except Exception as e:
+            error_msg = f"保存模板时发生错误: {str(e)}"
+            self.log(error_msg)
+            messagebox.showerror("错误", error_msg)
+    
+    def download_point_template(self):
+        """下载目标点位数据模板"""
+        try:
+            # 创建模板数据
+            template_data = {
+                '点位名称': ['目标点1', '目标点2', '目标点3'],
+                '经度': [116.3984, 116.4084, 116.4184],
+                '纬度': [39.9103, 39.9203, 39.9303]
+            }
+            
+            template_df = pd.DataFrame(template_data)
+            
+            # 选择保存位置
+            filename = filedialog.asksaveasfilename(
+                title="保存目标点位模板",
+                defaultextension=".xlsx",
+                filetypes=[("Excel文件", "*.xlsx")],
+                initialfile="Point_template.xlsx"
+            )
+            
+            if filename:
+                template_df.to_excel(filename, index=False)
+                self.log(f"目标点位模板已保存到: {filename}")
+                messagebox.showinfo("成功", f"目标点位模板已保存到: {filename}")
+        except Exception as e:
+            error_msg = f"保存模板时发生错误: {str(e)}"
+            self.log(error_msg)
+            messagebox.showerror("错误", error_msg)
+    
     def log(self, message):
         self.log_text.insert(tk.END, message + "\n")
         self.log_text.see(tk.END)
@@ -135,6 +224,16 @@ class PointMatcherTool:
         # 检查文件是否已选择
         if not self.data_file_path.get() or not self.point_file_path.get():
             messagebox.showerror("错误", "请先选择基准点位文件和目标点位文件！")
+            return
+        
+        # 检查输出位置是否已选择
+        if not self.output_dir.get():
+            messagebox.showerror("错误", "请先选择输出保存位置！")
+            return
+        
+        # 检查输出文件名是否已填写
+        if not self.output_file_path.get():
+            messagebox.showerror("错误", "请填写输出文件名！")
             return
         
         # 检查文件是否存在
@@ -156,7 +255,7 @@ class PointMatcherTool:
             point_df = pd.read_excel(self.point_file_path.get())
             
             # 检查必要的列是否存在
-            required_data_columns = ['点位编码', '点位名称', '经度', '纬度']
+            required_data_columns = ['点位名称', '经度', '纬度']
             required_point_columns = ['点位名称', '经度', '纬度']
             
             missing_data_columns = [col for col in required_data_columns if col not in data_df.columns]
@@ -178,7 +277,6 @@ class PointMatcherTool:
             
             # 创建结果DataFrame
             result_df = point_df.copy()
-            result_df['最近点位编码'] = ''
             result_df['最近点位名称'] = ''
             result_df['最近距离(米)'] = 0.0
             
@@ -208,7 +306,6 @@ class PointMatcherTool:
                 
                 # 将最近点的信息添加到结果中
                 if closest_point is not None:
-                    result_df.at[i, '最近点位编码'] = closest_point['点位编码']
                     result_df.at[i, '最近点位名称'] = closest_point['点位名称']
                     result_df.at[i, '最近距离(米)'] = min_distance
                 
@@ -218,12 +315,9 @@ class PointMatcherTool:
                     self.parent_frame.update_idletasks()
             
             # 保存结果到新的Excel文件
-            output_file = self.output_file_path.get()
+            output_file = os.path.join(self.output_dir.get(), self.output_file_path.get())
             
             # 将数值列转换为字符串，避免科学计数法显示
-            # 确保点位编码为字符串格式
-            result_df['最近点位编码'] = result_df['最近点位编码'].astype(str)
-            
             # 将距离值转换为字符串，保留两位小数
             result_df['最近距离(米)'] = result_df['最近距离(米)'].apply(lambda x: f"{x:.2f}")
             
