@@ -70,6 +70,14 @@ class ConversionTab:
                                                 command=self.convert_points_to_circles)
         self.point_to_circle_button.pack(fill=tk.X, expand=True)
         
+        # 第四行按钮 - Excel模板下载
+        row4_frame = ttk.Frame(button_frame)
+        row4_frame.pack(fill=tk.X, pady=5)
+        
+        self.download_excel_template_button = ttk.Button(row4_frame, text="📥 下载Excel模板", 
+                                                        command=self.download_excel_templates)
+        self.download_excel_template_button.pack(fill=tk.X, expand=True)
+        
         # 说明文本
         info_frame = ttk.LabelFrame(main_frame, text="使用说明")
         info_frame.pack(fill=tk.X, pady=(20, 0))
@@ -79,7 +87,8 @@ class ConversionTab:
             "• KML 转 Excel: 将KML文件中的点位信息导出为Excel\n"
             "• 地址转经纬度: 批量将地址转换为坐标（需要高德API）\n"
             "• 经纬度转地址: 批量将坐标转换为地址（需要高德API）\n"
-            "• KML点画圆: 为KML文件中的每个点生成指定半径的圆形区域"
+            "• KML点画圆: 为KML文件中的每个点生成指定半径的圆形区域\n"
+            "• 下载Excel模板: 提供标准格式的Excel模板文件，便于数据导入"
         )
         
         info_label = ttk.Label(info_frame, text=info_text, justify=tk.LEFT)
@@ -458,3 +467,156 @@ class ConversionTab:
             messagebox.showerror("转换失败", f"点画圆时发生错误: {e}")
             if self.update_status:
                 self.update_status(f"点画圆失败: {e}")
+    
+    def download_excel_templates(self):
+        """下载Excel模板文件"""
+        # 创建模板选择对话框
+        template_window = tk.Toplevel(self.parent)
+        template_window.title("选择Excel模板")
+        template_window.geometry("400x300")
+        template_window.transient(self.parent)
+        template_window.grab_set()
+        
+        # 居中显示
+        template_window.geometry("+%d+%d" % (
+            self.parent.winfo_rootx() + 50,
+            self.parent.winfo_rooty() + 50
+        ))
+        
+        main_frame = ttk.Frame(template_window)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # 标题
+        title_label = ttk.Label(main_frame, text="选择要下载的Excel模板", 
+                               font=("微软雅黑", 12, "bold"))
+        title_label.pack(pady=(0, 20))
+        
+        # 模板按钮
+        templates = [
+            ("📍 Excel转KML模板", "包含: 名称、经度、纬度、描述列", self.create_excel_to_kml_template),
+            ("🏠 地址转坐标模板", "包含: 地址、城市列", self.create_address_to_coords_template),
+            ("📌 坐标转地址模板", "包含: 经度、纬度、名称列", self.create_coords_to_address_template)
+        ]
+        
+        for title, desc, command in templates:
+            frame = ttk.Frame(main_frame)
+            frame.pack(fill=tk.X, pady=5)
+            
+            btn = ttk.Button(frame, text=title, command=lambda cmd=command: self.download_template(cmd, template_window))
+            btn.pack(fill=tk.X)
+            
+            desc_label = ttk.Label(frame, text=desc, font=("微软雅黑", 8), foreground="gray")
+            desc_label.pack()
+        
+        # 关闭按钮
+        close_btn = ttk.Button(main_frame, text="关闭", command=template_window.destroy)
+        close_btn.pack(pady=(20, 0))
+    
+    def download_template(self, template_func, window):
+        """下载指定模板"""
+        save_path = filedialog.asksaveasfilename(
+            defaultextension=".xlsx",
+            filetypes=[("Excel 工作簿", "*.xlsx"), ("所有文件", "*.*")],
+            title="保存Excel模板"
+        )
+        
+        if save_path:
+            try:
+                template_func(save_path)
+                messagebox.showinfo("下载成功", f"Excel模板已保存到:\n{save_path}")
+                if self.update_status:
+                    self.update_status(f"模板下载完成: {save_path}")
+                window.destroy()
+            except Exception as e:
+                messagebox.showerror("下载失败", f"保存模板时发生错误: {e}")
+                if self.update_status:
+                    self.update_status(f"模板下载失败: {e}")
+    
+    def create_excel_to_kml_template(self, file_path):
+        """创建Excel转KML模板"""
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = "Excel转KML模板"
+        
+        # 设置标题行
+        headers = ["名称", "经度", "纬度", "描述"]
+        for col, header in enumerate(headers, 1):
+            sheet.cell(row=1, column=col, value=header)
+        
+        # 添加示例数据
+        examples = [
+            ["示例点1", 116.397428, 39.90923, "这是一个示例点的描述"],
+            ["示例点2", 121.473701, 31.230416, "上海市中心"],
+            ["示例点3", 113.280637, 23.125178, "广州市中心"]
+        ]
+        
+        for row, example in enumerate(examples, 2):
+            for col, value in enumerate(example, 1):
+                sheet.cell(row=row, column=col, value=value)
+        
+        # 设置列宽
+        sheet.column_dimensions['A'].width = 15
+        sheet.column_dimensions['B'].width = 12
+        sheet.column_dimensions['C'].width = 12
+        sheet.column_dimensions['D'].width = 30
+        
+        workbook.save(file_path)
+    
+    def create_address_to_coords_template(self, file_path):
+        """创建地址转坐标模板"""
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = "地址转坐标模板"
+        
+        # 设置标题行
+        headers = ["地址", "城市"]
+        for col, header in enumerate(headers, 1):
+            sheet.cell(row=1, column=col, value=header)
+        
+        # 添加示例数据
+        examples = [
+            ["天安门广场", "北京市"],
+            ["外滩", "上海市"],
+            ["广州塔", "广州市"],
+            ["西湖", "杭州市"]
+        ]
+        
+        for row, example in enumerate(examples, 2):
+            for col, value in enumerate(example, 1):
+                sheet.cell(row=row, column=col, value=value)
+        
+        # 设置列宽
+        sheet.column_dimensions['A'].width = 30
+        sheet.column_dimensions['B'].width = 15
+        
+        workbook.save(file_path)
+    
+    def create_coords_to_address_template(self, file_path):
+        """创建坐标转地址模板"""
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = "坐标转地址模板"
+        
+        # 设置标题行
+        headers = ["经度", "纬度", "名称"]
+        for col, header in enumerate(headers, 1):
+            sheet.cell(row=1, column=col, value=header)
+        
+        # 添加示例数据
+        examples = [
+            [116.397428, 39.90923, "北京示例点"],
+            [121.473701, 31.230416, "上海示例点"],
+            [113.280637, 23.125178, "广州示例点"],
+            [120.153576, 30.287459, "杭州示例点"]
+        ]
+        
+        for row, example in enumerate(examples, 2):
+            for col, value in enumerate(example, 1):
+                sheet.cell(row=row, column=col, value=value)
+        
+        # 设置列宽
+        sheet.column_dimensions['A'].width = 12
+        sheet.column_dimensions['B'].width = 12
+        sheet.column_dimensions['C'].width = 15
+        
+        workbook.save(file_path)
