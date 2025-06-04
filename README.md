@@ -397,25 +397,47 @@ Integrated_Tools/
 - **格式检查**：转换前验证文件格式
 - **错误提示**：详细的错误信息和解决建议
 
-### 配置选项示例
+## ⚙️ 环境配置
 
-```json
-{
-  "amap_api_key": "your_api_key_here",
-  "theme": "light",
-  "window_size": "1000x700",
-  "auto_save_history": true,
-  "max_history_records": 1000
-}
-```
+### 🔐 API密钥配置
 
-## 🔑 API密钥申请（高德地图功能）
+为了保护敏感信息，本项目使用环境变量管理API密钥：
+
+1. **复制环境变量模板**：
+   ```bash
+   cp .env.template .env
+   ```
+
+2. **编辑 `.env` 文件**，填入你的API密钥：
+   ```bash
+   # 高德地图API密钥
+   AMAP_API_KEY=your_actual_api_key_here
+   ```
+
+3. **安装依赖**：
+   ```bash
+   uv sync
+   ```
+
+### 🔑 API密钥申请（高德地图功能）
 
 1. 访问[高德开放平台](https://console.amap.com/dev/key/app)
 2. 注册并登录账号
 3. 创建新应用
 4. 申请"Web服务API"密钥
-5. 在应用设置中配置密钥
+5. 将密钥配置到 `.env` 文件中
+
+### 📋 配置文件说明
+
+- `.env` - 环境变量配置（包含敏感信息，不会提交到仓库）
+- `.env.template` - 环境变量模板（可安全提交）
+- `user_config.json` - 用户偏好设置（不包含敏感信息）
+
+### 🛡️ 安全说明
+
+- `.env` 文件已添加到 `.gitignore`，不会被提交到版本控制
+- API密钥优先从环境变量读取，确保安全性
+- 配置文件中的敏感信息已被移除
 
 ---
 

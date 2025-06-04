@@ -7,6 +7,10 @@
 import os
 import json
 from typing import Dict, Any, Optional
+from dotenv import load_dotenv
+
+# 加载环境变量
+load_dotenv()
 
 class Config:
     """配置管理类"""
@@ -14,8 +18,8 @@ class Config:
     def __init__(self):
         self.config_file = os.path.join(os.path.dirname(__file__), 'user_config.json')
         self.default_config = {
-            # API配置
-            'amap_api_key':'635698df46a5c6ddf942ddb093ca1738',  # 高德地图API密钥
+            # API配置 - 从环境变量获取
+            'amap_api_key': os.getenv('AMAP_API_KEY', ''),  # 高德地图API密钥
             
             # 个人偏好设置
             'favorite_locations': [
@@ -110,6 +114,10 @@ class Config:
     
     def get_amap_api_key(self) -> str:
         """获取高德地图API密钥"""
+        # 优先从环境变量获取，其次从配置文件
+        api_key = os.getenv('AMAP_API_KEY')
+        if api_key:
+            return api_key
         return self.get('amap_api_key', '')
     
     def set_amap_api_key(self, api_key: str) -> bool:

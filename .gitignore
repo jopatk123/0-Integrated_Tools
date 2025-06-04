@@ -10,9 +10,18 @@ __pycache__/
 *.swo
 *.tmp
 *.xlsx
+
+# 环境变量和敏感配置文件
 .env
+.env.local
+.env.*.local
+config_secret.json
+
+# IDE配置
 .idea/
 .vscode/
+
+# 系统文件
 .DS_Store
 Thumbs.db
 .jpg
