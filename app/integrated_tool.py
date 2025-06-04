@@ -19,7 +19,7 @@ class IntegratedTool:
     def __init__(self, root):
         self.root = root
         self.root.title("文件工具集成平台")
-        self.root.geometry("1000x700")
+        self.root.geometry("1000x900")
         self.root.minsize(800, 600)
         
         # 设置主题颜色
