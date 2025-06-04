@@ -3,6 +3,7 @@ from tkinter import ttk, filedialog, messagebox
 import os
 from pathlib import Path
 import threading
+import re
 
 try:
     import docx
@@ -57,7 +58,7 @@ class FormatConverterTool:
         
         warning_label = tk.Label(warning_frame, text=warning_msg, 
                                bg="#ffeeee", fg="#cc0000", 
-                               justify=tk.LEFT, font=("Arial", 10))
+                               justify=tk.LEFT, font=("微软雅黑", 10))
         warning_label.pack(padx=10, pady=10)
         
     def create_widgets(self):
@@ -68,7 +69,8 @@ class FormatConverterTool:
         
         instruction_text = "格式转换工具：支持Markdown与Word文档之间的相互转换。选择源文件和目标格式，点击转换即可。"
         instruction_label = tk.Label(instruction_frame, text=instruction_text, 
-                                  bg=self.theme.bg_color, justify=tk.LEFT, wraplength=980)
+                                  bg=self.theme.bg_color, justify=tk.LEFT, wraplength=980,
+                                  font=("微软雅黑", 10))
         instruction_label.pack(fill=tk.X, padx=5, pady=5)
         
         # 主要操作框架
@@ -76,7 +78,8 @@ class FormatConverterTool:
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
         # 源文件选择区域
-        source_frame = tk.LabelFrame(main_frame, text="源文件选择", bg=self.theme.bg_color)
+        source_frame = tk.LabelFrame(main_frame, text="源文件选择", bg=self.theme.bg_color,
+                                   font=("微软雅黑", 10, "bold"))
         source_frame.pack(fill=tk.X, pady=5)
         
         # 源文件路径
@@ -84,50 +87,61 @@ class FormatConverterTool:
         source_path_frame = tk.Frame(source_frame, bg=self.theme.bg_color)
         source_path_frame.pack(fill=tk.X, padx=10, pady=5)
         
-        tk.Label(source_path_frame, text="源文件：", bg=self.theme.bg_color).pack(side=tk.LEFT)
-        source_entry = tk.Entry(source_path_frame, textvariable=self.source_path_var, width=60)
+        tk.Label(source_path_frame, text="源文件：", bg=self.theme.bg_color,
+                font=("微软雅黑", 10)).pack(side=tk.LEFT)
+        source_entry = tk.Entry(source_path_frame, textvariable=self.source_path_var, width=60,
+                               font=("微软雅黑", 10))
         source_entry.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
         
         button_style = self.theme.get_button_style()
         browse_btn = tk.Button(source_path_frame, text="浏览", command=self.browse_source_file,
-                             bg=button_style["bg"], fg=button_style["fg"])
+                             bg=button_style["bg"], fg=button_style["fg"],
+                             font=("微软雅黑", 10))
         browse_btn.pack(side=tk.RIGHT, padx=5)
         
         # 转换选项区域
-        option_frame = tk.LabelFrame(main_frame, text="转换选项", bg=self.theme.bg_color)
+        option_frame = tk.LabelFrame(main_frame, text="转换选项", bg=self.theme.bg_color,
+                                   font=("微软雅黑", 10, "bold"))
         option_frame.pack(fill=tk.X, pady=5)
         
         # 转换方向选择
         direction_frame = tk.Frame(option_frame, bg=self.theme.bg_color)
         direction_frame.pack(fill=tk.X, padx=10, pady=5)
         
-        tk.Label(direction_frame, text="转换方向：", bg=self.theme.bg_color).pack(side=tk.LEFT)
+        tk.Label(direction_frame, text="转换方向：", bg=self.theme.bg_color,
+                font=("微软雅黑", 10)).pack(side=tk.LEFT)
         
         self.conversion_direction = tk.StringVar(value="md_to_docx")
         md_to_docx_radio = tk.Radiobutton(direction_frame, text="Markdown → Word", 
                                         variable=self.conversion_direction, value="md_to_docx",
-                                        bg=self.theme.bg_color, command=self.update_file_filter)
+                                        bg=self.theme.bg_color, command=self.update_file_filter,
+                                        font=("微软雅黑", 10))
         md_to_docx_radio.pack(side=tk.LEFT, padx=10)
         
         docx_to_md_radio = tk.Radiobutton(direction_frame, text="Word → Markdown", 
                                         variable=self.conversion_direction, value="docx_to_md",
-                                        bg=self.theme.bg_color, command=self.update_file_filter)
+                                        bg=self.theme.bg_color, command=self.update_file_filter,
+                                        font=("微软雅黑", 10))
         docx_to_md_radio.pack(side=tk.LEFT, padx=10)
         
         # 输出目录选择
-        output_frame = tk.LabelFrame(main_frame, text="输出设置", bg=self.theme.bg_color)
+        output_frame = tk.LabelFrame(main_frame, text="输出设置", bg=self.theme.bg_color,
+                                   font=("微软雅黑", 10, "bold"))
         output_frame.pack(fill=tk.X, pady=5)
         
         self.output_dir_var = tk.StringVar()
         output_dir_frame = tk.Frame(output_frame, bg=self.theme.bg_color)
         output_dir_frame.pack(fill=tk.X, padx=10, pady=5)
         
-        tk.Label(output_dir_frame, text="输出目录：", bg=self.theme.bg_color).pack(side=tk.LEFT)
-        output_entry = tk.Entry(output_dir_frame, textvariable=self.output_dir_var, width=60)
+        tk.Label(output_dir_frame, text="输出目录：", bg=self.theme.bg_color,
+                font=("微软雅黑", 10)).pack(side=tk.LEFT)
+        output_entry = tk.Entry(output_dir_frame, textvariable=self.output_dir_var, width=60,
+                              font=("微软雅黑", 10))
         output_entry.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
         
         browse_output_btn = tk.Button(output_dir_frame, text="浏览", command=self.browse_output_dir,
-                                    bg=button_style["bg"], fg=button_style["fg"])
+                                    bg=button_style["bg"], fg=button_style["fg"],
+                                    font=("微软雅黑", 10))
         browse_output_btn.pack(side=tk.RIGHT, padx=5)
         
         # 转换按钮
@@ -137,13 +151,13 @@ class FormatConverterTool:
         success_style = self.theme.get_button_style("success")
         self.convert_btn = tk.Button(convert_frame, text="开始转换", command=self.start_conversion,
                                    bg=success_style["bg"], fg=success_style["fg"], 
-                                   font=("Arial", 12, "bold"))
+                                   font=("微软雅黑", 12, "bold"))
         self.convert_btn.pack(pady=10)
         
         # 进度显示
         self.progress_var = tk.StringVar(value="准备就绪")
         progress_label = tk.Label(convert_frame, textvariable=self.progress_var, 
-                                bg=self.theme.bg_color, font=("Arial", 10))
+                                bg=self.theme.bg_color, font=("微软雅黑", 10))
         progress_label.pack(pady=5)
         
     def update_file_filter(self):
@@ -267,6 +281,9 @@ class FormatConverterTool:
             
         # 创建Word文档
         doc = Document()
+        
+        # 设置文档样式
+        self.setup_document_styles(doc)
         
         # 解析HTML并添加到Word文档
         if BeautifulSoup:
@@ -502,12 +519,24 @@ class FormatConverterTool:
         try:
             from docx.shared import Pt, RGBColor
             from docx.enum.text import WD_ALIGN_PARAGRAPH
+            from docx.oxml.shared import OxmlElement, qn
             
             # 设置默认字体
             style = doc.styles['Normal']
             font = style.font
             font.name = '微软雅黑'
             font.size = Pt(11)
+            
+            # 设置标题样式
+            for i in range(1, 7):
+                try:
+                    heading_style = doc.styles[f'Heading {i}']
+                    heading_font = heading_style.font
+                    heading_font.name = '微软雅黑'
+                    heading_font.size = Pt(16 - i)
+                    heading_font.bold = True
+                except KeyError:
+                    pass
             
         except ImportError:
             pass  # 如果没有相关模块，跳过样式设置
@@ -663,7 +692,7 @@ class FormatConverterTool:
             text_frame = tk.Frame(preview_window)
             text_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
             
-            text_widget = tk.Text(text_frame, wrap=tk.WORD)
+            text_widget = tk.Text(text_frame, wrap=tk.WORD, font=("微软雅黑", 10))
             scrollbar = tk.Scrollbar(text_frame, orient=tk.VERTICAL, command=text_widget.yview)
             text_widget.configure(yscrollcommand=scrollbar.set)
             
@@ -698,7 +727,8 @@ class FormatConverterTool:
             
             # 添加关闭按钮
             close_btn = tk.Button(preview_window, text="关闭", 
-                                command=preview_window.destroy)
+                                command=preview_window.destroy,
+                                font=("微软雅黑", 10))
             close_btn.pack(pady=10)
             
         except Exception as e:
