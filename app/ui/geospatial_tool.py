@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""地理空间工具 - 重构版本"""
+"""地理空间工具集 - 整合高德地图工具和地理空间工具的所有功能"""
 
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -7,20 +7,22 @@ from config import config
 from .geospatial.dialogs import ConfigDialog
 from .geospatial.poi_search_tab import POISearchTab
 from .geospatial.conversion_tab import ConversionTab
-from .amap.utils import FavoriteManager, show_favorites_window
+from .geospatial.route_tab import RouteTab
+from .geospatial.geocoding_tab import GeocodingTab
+from .geospatial.weather_tab import WeatherTab
+from .geospatial.utils import HistoryManager, FavoriteManager, show_history_window, show_favorites_window, show_settings_window
 
 class GeospatialTool:
-    """地理空间工具主类 - 重构后的版本"""
+    """合并后的地理空间工具主类 - 整合所有地理空间相关功能"""
     
     def __init__(self, parent, theme):
         self.parent = parent
         self.theme = theme
         self.status_text = tk.StringVar(value="就绪")
         
-        # 初始化配置
+        # 初始化配置和管理器
         self.config = config
-        
-        # 初始化收藏管理器
+        self.history_manager = HistoryManager(self.config)
         self.favorite_manager = FavoriteManager(self.config)
         
         # 检查API密钥
@@ -56,15 +58,15 @@ class GeospatialTool:
         )
         title_label.pack(pady=10)
         
-        # 坐标系说明
-        coord_info = tk.Label(
+        # 功能说明
+        feature_info = tk.Label(
             main_frame, 
-            text="📍 支持WGS-84坐标系，自动转换为GCJ-02调用高德API，结果转回WGS-84",
+            text="📍 集成POI搜索、路径规划、地理编码、天气查询、格式转换等功能 | 支持WGS-84、GCJ-02、BD-09坐标系自动转换",
             font=("微软雅黑", 9), 
             bg=self.theme.bg_color, 
             fg=self.theme.accent_color
         )
-        coord_info.pack(pady=(0, 10))
+        feature_info.pack(pady=(0, 10))
         
         # 创建选项卡
         self.notebook = ttk.Notebook(main_frame)
@@ -72,8 +74,22 @@ class GeospatialTool:
         
         # 创建各个选项卡
         self.poi_search_tab = POISearchTab(
-            self.parent, self.notebook, self.theme, self.config, None
+            self.parent, self.notebook, self.theme, self.config, self.favorite_manager
         )
+        
+        self.route_tab = RouteTab(
+            self.parent, self.notebook, self.theme, self.config, 
+            self.history_manager, self.favorite_manager
+        )
+        
+        self.geocoding_tab = GeocodingTab(
+            self.parent, self.notebook, self.theme, self.config
+        )
+        
+        self.weather_tab = WeatherTab(
+            self.parent, self.notebook, self.theme, self.config
+        )
+        
         self.conversion_tab = ConversionTab(
             self.parent, self.notebook, self.theme, self.config
         )
@@ -83,6 +99,9 @@ class GeospatialTool:
         
         # 设置状态更新回调
         self.poi_search_tab.update_status = self.update_status
+        self.route_tab.update_status = self.update_status
+        self.geocoding_tab.update_status = self.update_status
+        self.weather_tab.update_status = self.update_status
         self.conversion_tab.update_status = self.update_status
     
     def create_status_bar(self, parent):
@@ -103,6 +122,18 @@ class GeospatialTool:
         # 工具按钮
         button_frame = tk.Frame(status_frame, bg=self.theme.bg_color)
         button_frame.pack(side=tk.RIGHT, padx=5, pady=2)
+        
+        # 历史记录按钮
+        history_btn = tk.Button(
+            button_frame, 
+            text="📜 历史", 
+            command=self.show_history,
+            font=("微软雅黑", 8), 
+            relief=tk.FLAT,
+            bg=self.theme.bg_color, 
+            fg=self.theme.accent_color
+        )
+        history_btn.pack(side=tk.LEFT, padx=2)
         
         # 收藏管理按钮
         favorites_btn = tk.Button(
@@ -145,6 +176,10 @@ class GeospatialTool:
         self.status_text.set(message)
         self.parent.update_idletasks()
     
+    def show_history(self):
+        """显示历史记录"""
+        show_history_window(self.parent, self.history_manager, self.theme)
+    
     def manage_favorites(self):
         """管理收藏位置"""
         show_favorites_window(self.parent, self.favorite_manager, self.theme)
@@ -167,15 +202,31 @@ class GeospatialTool:
         help_text = """
 🌍 地理空间工具集使用说明
 
-📍 POI搜索功能：
+🔍 POI搜索功能：
 • 输入WGS-84坐标和关键字搜索周边POI
 • 支持收藏常用位置
 • 可导出结果为Excel或KML格式
+
+🚗 路径规划功能：
+• 支持驾车、步行、公交路径规划
+• 提供详细的路线信息和导航指引
+• 可保存常用路线到历史记录
+
+📍 批量地理编码：
+• 批量查询坐标对应的行政区域信息
+• 支持Excel文件导入导出
+• 自动处理坐标系转换
+
+🌤️ 天气预报：
+• 支持城市名称、详细地址查询
+• 提供实时天气和预报信息
+• 常用城市快捷查询
 
 🔄 格式转换功能：
 • Excel ↔ KML 格式互转
 • 地址 ↔ 经纬度批量转换
 • KML点画圆功能
+• 提供标准Excel模板下载
 
 ⚙️ 配置说明：
 • 需要配置高德地图Web服务API Key
@@ -191,21 +242,23 @@ class GeospatialTool:
 • 建议先配置API Key再使用
 • 可以收藏常用位置便于快速选择
 • 批量转换支持Excel文件导入导出
+• 历史记录保存最近的查询结果
         """
         
         # 创建帮助窗口
         help_window = tk.Toplevel(self.parent)
         help_window.title("使用帮助")
-        help_window.geometry("500x600")
+        help_window.geometry("600x700")
         help_window.transient(self.parent)
+        help_window.grab_set()
         
-        # 居中显示
-        help_window.geometry("+%d+%d" % (
-            self.parent.winfo_rootx() + 50,
-            self.parent.winfo_rooty() + 50
-        ))
+        # 设置窗口居中
+        help_window.update_idletasks()
+        x = (help_window.winfo_screenwidth() // 2) - (600 // 2)
+        y = (help_window.winfo_screenheight() // 2) - (700 // 2)
+        help_window.geometry(f"600x700+{x}+{y}")
         
-        # 创建文本框和滚动条
+        # 创建滚动文本框
         text_frame = tk.Frame(help_window)
         text_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
@@ -213,16 +266,15 @@ class GeospatialTool:
             text_frame, 
             wrap=tk.WORD, 
             font=("微软雅黑", 10),
-            bg="white",
-            fg="black"
+            bg=self.theme.bg_color,
+            fg=self.theme.text_color
         )
-        scrollbar = tk.Scrollbar(text_frame, orient="vertical", command=text_widget.yview)
+        scrollbar = tk.Scrollbar(text_frame, orient=tk.VERTICAL, command=text_widget.yview)
         text_widget.configure(yscrollcommand=scrollbar.set)
         
         text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        # 插入帮助文本
         text_widget.insert(tk.END, help_text)
         text_widget.config(state=tk.DISABLED)
         
@@ -231,27 +283,8 @@ class GeospatialTool:
             help_window, 
             text="关闭", 
             command=help_window.destroy,
-            font=("微软雅黑", 10)
+            font=("微软雅黑", 10),
+            bg=self.theme.button_color,
+            fg="white"
         )
         close_btn.pack(pady=10)
-
-# 为了保持向后兼容性，创建一个包装类
-class GeoSpatialApp(GeospatialTool):
-    """向后兼容的包装类"""
-    
-    def __init__(self, master):
-        # 创建一个简单的主题对象
-        class SimpleTheme:
-            bg_color = "#f0f0f0"
-            text_color = "#000000"
-            accent_color = "#0066cc"
-        
-        theme = SimpleTheme()
-        super().__init__(master, theme)
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    root.title("地理空间工具集")
-    root.geometry("800x700")
-    app = GeoSpatialApp(root)
-    root.mainloop()

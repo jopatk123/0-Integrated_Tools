@@ -119,6 +119,23 @@ class VideoResizerFeatureTab:
         self.compression_value_label.pack(padx=5, pady=2)
         self.compression_slider.config(command=self.update_compression_label)
         
+        # GPU 加速选项
+        gpu_frame = tk.Frame(self.parent_frame, bg=self.theme.bg_color)
+        gpu_frame.pack(fill=tk.X, pady=5)
+        
+        self.gpu_acceleration = tk.BooleanVar()
+        self.gpu_checkbox = tk.Checkbutton(gpu_frame, text="启用 NVIDIA GPU 加速 (需要支持的显卡和驱动)", 
+                                         variable=self.gpu_acceleration,
+                                         bg=self.theme.bg_color, anchor="w")
+        self.gpu_checkbox.pack(fill=tk.X, padx=5, pady=2)
+        
+        # GPU 加速说明
+        gpu_info_label = tk.Label(gpu_frame, 
+                                text="注意：GPU 加速需要 NVIDIA 显卡和正确的驱动程序。如果启用后出现错误，请关闭此选项。", 
+                                bg=self.theme.bg_color, anchor="w", 
+                                font=("Arial", 8), fg="gray")
+        gpu_info_label.pack(fill=tk.X, padx=5, pady=2)
+        
         # 进度条
         progress_frame = tk.Frame(self.parent_frame, bg=self.theme.bg_color)
         progress_frame.pack(fill=tk.X, pady=5)
@@ -269,12 +286,26 @@ class VideoResizerFeatureTab:
                 output_path = os.path.join(output_dir, output_filename)
                 
                 # 使用ffmpeg进行视频压缩
-                cmd = [
-                    "ffmpeg", "-i", video_file, 
-                    "-crf", str(crf_value), 
-                    "-preset", "medium", 
-                    "-y", output_path
-                ]
+                if self.gpu_acceleration.get():
+                    # 使用 NVIDIA GPU 加速
+                    cmd = [
+                        "ffmpeg", 
+                        "-hwaccel", "cuvid",
+                        "-c:v", "h264_cuvid",
+                        "-i", video_file, 
+                        "-c:v", "h264_nvenc",
+                        "-crf", str(crf_value), 
+                        "-preset", "fast", 
+                        "-y", output_path
+                    ]
+                else:
+                    # 使用 CPU 软件编码
+                    cmd = [
+                        "ffmpeg", "-i", video_file, 
+                        "-crf", str(crf_value), 
+                        "-preset", "medium", 
+                        "-y", output_path
+                    ]
                 
                 process = subprocess.Popen(
                     cmd, 

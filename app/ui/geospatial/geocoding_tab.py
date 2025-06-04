@@ -8,7 +8,7 @@ from ...utils import amap_api
 
 
 class GeocodingTab:
-    """批量地理编码选项卡"""
+    """行政区查询选项卡"""
     
     def __init__(self, parent, notebook, theme, config):
         self.parent = parent
@@ -19,11 +19,11 @@ class GeocodingTab:
         
         # 创建选项卡
         self.frame = ttk.Frame(notebook)
-        notebook.add(self.frame, text="📍 批量地理编码")
+        notebook.add(self.frame, text="📍 行政区查询")
         self.create_tab()
         
     def create_tab(self):
-        """创建批量地理编码选项卡"""
+        """创建行政区查询选项卡"""
         geocoding_frame = self.frame
         
         # 说明信息
@@ -38,6 +38,13 @@ class GeocodingTab:
         # 文件上传和查询按钮
         btn_frame = tk.Frame(geocoding_frame, bg=self.theme.bg_color)
         btn_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        # 下载模版按钮
+        template_btn = tk.Button(btn_frame, text="下载Excel模版", 
+                                command=self.download_template,
+                                bg=self.theme.accent_color, fg="white",
+                                font=("微软雅黑", 10), relief=tk.FLAT)
+        template_btn.pack(side=tk.LEFT, padx=(0, 10))
         
         # 上传文件按钮
         upload_btn = tk.Button(btn_frame, text="上传Excel文件", 
@@ -80,6 +87,57 @@ class GeocodingTab:
         
         self.geocoding_result_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    
+    def download_template(self):
+        """下载Excel模版"""
+        try:
+            # 让用户选择保存位置
+            file_path = filedialog.asksaveasfilename(
+                title="保存Excel模版",
+                defaultextension=".xlsx",
+                filetypes=[("Excel文件", "*.xlsx")],
+                initialvalue="行政区查询模版.xlsx"
+            )
+            
+            if file_path:
+                # 创建新的工作簿
+                wb = openpyxl.Workbook()
+                ws = wb.active
+                ws.title = "坐标数据"
+                
+                # 设置标题行
+                ws['A1'] = "经度(longitude)"
+                ws['B1'] = "纬度(latitude)"
+                ws['C1'] = "省份"
+                ws['D1'] = "城市"
+                ws['E1'] = "区县"
+                ws['F1'] = "详细地址"
+                
+                # 添加示例数据
+                ws['A2'] = 116.397428
+                ws['B2'] = 39.90923
+                ws['A3'] = 121.473701
+                ws['B3'] = 31.230416
+                ws['A4'] = 113.280637
+                ws['B4'] = 23.125178
+                
+                # 设置列宽
+                ws.column_dimensions['A'].width = 15
+                ws.column_dimensions['B'].width = 15
+                ws.column_dimensions['C'].width = 12
+                ws.column_dimensions['D'].width = 12
+                ws.column_dimensions['E'].width = 12
+                ws.column_dimensions['F'].width = 30
+                
+                # 保存文件
+                wb.save(file_path)
+                
+                messagebox.showinfo("成功", f"Excel模版已保存到：\n{file_path}")
+                self.update_status("Excel模版下载完成")
+                
+        except Exception as e:
+            messagebox.showerror("错误", f"下载模版失败：{str(e)}")
+            self.update_status("模版下载失败")
         
     def upload_excel(self):
         """上传Excel文件"""

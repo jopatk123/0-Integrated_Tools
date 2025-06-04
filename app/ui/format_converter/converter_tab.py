@@ -203,6 +203,27 @@ class ConverterTab:
         thread.daemon = True
         thread.start()
         
+    def read_file_with_encoding(self, file_path):
+        """尝试使用多种编码读取文件"""
+        encodings = ['utf-8', 'gbk', 'gb2312', 'utf-16', 'latin-1']
+        
+        for encoding in encodings:
+            try:
+                with open(file_path, 'r', encoding=encoding) as f:
+                    content = f.read()
+                if self.update_status:
+                    self.update_status(f"使用 {encoding} 编码成功读取文件")
+                return content
+            except UnicodeDecodeError:
+                continue
+            except Exception as e:
+                if self.update_status:
+                    self.update_status(f"读取文件时出错: {str(e)}")
+                continue
+        
+        # 如果所有编码都失败，抛出异常
+        raise UnicodeDecodeError("无法使用任何支持的编码读取文件")
+    
     def validate_inputs(self):
         """验证输入参数"""
         source_file = self.source_path_var.get().strip()
@@ -267,9 +288,8 @@ class ConverterTab:
             
     def convert_md_to_docx(self, md_file, output_dir):
         """将Markdown文件转换为Word文档"""
-        # 读取Markdown文件
-        with open(md_file, 'r', encoding='utf-8') as f:
-            md_content = f.read()
+        # 读取Markdown文件，尝试多种编码
+        md_content = self.read_file_with_encoding(md_file)
             
         # 转换为HTML
         if markdown:
@@ -295,7 +315,12 @@ class ConverterTab:
         # 保存文档
         base_name = Path(md_file).stem
         output_file = os.path.join(output_dir, f"{base_name}.docx")
-        doc.save(output_file)
+        try:
+            doc.save(output_file)
+            if self.update_status:
+                self.update_status(f"文件已保存到: {output_file}")
+        except Exception as e:
+            raise Exception(f"保存Word文档失败: {str(e)}")
         
     def convert_docx_to_md(self, docx_file, output_dir):
         """将Word文档转换为Markdown文件"""
@@ -309,8 +334,13 @@ class ConverterTab:
         base_name = Path(docx_file).stem
         output_file = os.path.join(output_dir, f"{base_name}.md")
         
-        with open(output_file, 'w', encoding='utf-8') as f:
-            f.write(md_content)
+        try:
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(md_content)
+            if self.update_status:
+                self.update_status(f"文件已保存到: {output_file}")
+        except Exception as e:
+            raise Exception(f"保存文件失败: {str(e)}")
             
     def simple_md_to_html(self, md_content):
         """简单的Markdown到HTML转换"""
