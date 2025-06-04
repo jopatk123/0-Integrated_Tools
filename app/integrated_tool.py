@@ -13,6 +13,7 @@ from app.ui.geospatial_tool import GeoSpatialApp # Import the new tool
 from app.ui.amap_tool import AmapTool # Import the Amap tool
 from app.ui.format_converter_tool import FormatConverterTool # Import the format converter tool
 from app.utils.theme import ThemeManager
+from app.config import config
 
 class IntegratedTool:
     def __init__(self, root):
@@ -23,6 +24,7 @@ class IntegratedTool:
         
         # 设置主题颜色
         self.theme = ThemeManager()
+        self.config = config
         self.root.configure(bg=self.theme.bg_color)
         
         # 创建主框架
@@ -89,7 +91,7 @@ class IntegratedTool:
         self.point_matcher_tool = PointMatcherTool(self.point_matcher_frame, self.theme)
         
         # 初始化图片处理工具界面
-        self.image_processor_tool = ImageProcessorTool(self.image_processor_frame, self.theme)
+        self.image_processor_tool = ImageProcessorTool(self.image_processor_frame, self.theme, self.config)
         
         # 初始化Excel图片提取工具界面
         self.excel_image_extractor_tool = ExcelImageExtractorTool(self.excel_image_extractor_frame, self.theme)

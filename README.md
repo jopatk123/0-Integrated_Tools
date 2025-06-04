@@ -78,11 +78,8 @@
    
    或手动启动：
    ```bash
-   # 创建虚拟环境
-   uv venv
-   
-   # 安装依赖
-   uv pip install -r requirements.txt
+   # 创建虚拟环境并安装依赖
+   uv sync
    
    # 启动应用
    uv run python main.py
@@ -204,17 +201,40 @@ Integrated_Tools/
 │   │   │   ├── poi_search_tab.py   # POI搜索界面
 │   │   │   ├── conversion_tab.py   # 格式转换界面
 │   │   │   └── dialogs.py          # 配置对话框
+│   │   ├── file_path/              # 文件路径工具模块
+│   │   │   └── path_tab.py         # 路径获取界面
+│   │   ├── rename/                 # 重命名工具模块
+│   │   │   ├── rename_tab.py       # 重命名界面
+│   │   │   └── template_generator.py # 模板生成器
+│   │   ├── file_organizer/         # 文件整理工具模块
+│   │   │   └── organizer_tab.py    # 整理界面
+│   │   ├── file_sorter/            # 文件分类工具模块
+│   │   │   └── sorter_tab.py       # 分类界面
+│   │   ├── video_resizer/          # 视频压缩工具模块
+│   │   │   └── feature_tab.py      # 功能界面
+│   │   ├── image_gps_extractor/    # 图片GPS提取模块
+│   │   │   └── gps_extractor_tab.py # GPS提取界面
+│   │   ├── image_processor/        # 图片处理工具模块
+│   │   │   └── processor_tab.py    # 处理界面
+│   │   ├── excel_image_extractor/  # Excel图片提取模块
+│   │   │   └── extractor_tab.py    # 提取界面
+│   │   ├── format_converter/       # 格式转换工具模块
+│   │   │   └── converter_tab.py    # 转换界面
+│   │   ├── point_matcher/          # 点位匹配工具模块
+│   │   │   ├── point_matcher_tab.py # 匹配界面
+│   │   │   ├── distance_calculator.py # 距离计算
+│   │   │   └── template_generator.py # 模板生成器
 │   │   ├── amap_tool.py            # 高德地图工具主类
-│   │   ├── file_path_tool.py       # 文件路径工具
-│   │   ├── rename_tool.py          # 重命名工具
-│   │   ├── file_organizer_tool.py  # 文件整理工具
-│   │   ├── video_resizer_tool.py   # 视频压缩工具
-│   │   ├── image_gps_extractor_tool.py # 图片GPS提取
-│   │   ├── file_sorter_tool.py     # 文件分类工具
-│   │   ├── point_matcher_tool.py   # 点位匹配工具
-│   │   ├── image_processor_tool.py # 图片处理工具
-│   │   ├── excel_image_extractor_tool.py # Excel图片提取
-│   │   ├── format_converter_tool.py # 格式转换工具
+│   │   ├── file_path_tool.py       # 文件路径工具主类
+│   │   ├── rename_tool.py          # 重命名工具主类
+│   │   ├── file_organizer_tool.py  # 文件整理工具主类
+│   │   ├── file_sorter_tool.py     # 文件分类工具主类
+│   │   ├── video_resizer_tool.py   # 视频压缩工具主类
+│   │   ├── image_gps_extractor_tool.py # 图片GPS提取主类
+│   │   ├── image_processor_tool.py # 图片处理工具主类
+│   │   ├── excel_image_extractor_tool.py # Excel图片提取主类
+│   │   ├── format_converter_tool.py # 格式转换工具主类
+│   │   ├── point_matcher_tool.py   # 点位匹配工具主类
 │   │   └── geospatial_tool.py      # 地理空间工具主类
 │   └── utils/                      # 工具库
 │       ├── amap_api.py             # 高德地图API
@@ -224,11 +244,14 @@ Integrated_Tools/
 │       └── theme.py                # 主题管理
 ├── config.py                       # 配置管理
 ├── main.py                         # 应用入口
-├── requirements.txt                # 依赖列表
-├── pyproject.toml                  # 项目配置
+├── pyproject.toml                  # 项目配置（uv包管理）
+├── uv.lock                         # uv锁定文件
 ├── start.bat                       # 启动脚本
 ├── user_config.json               # 用户配置
 ├── user_history.json              # 用户历史
+├── 工具重构指南.md                  # 重构指南
+├── 高德地图工具说明.md              # 高德地图说明
+├── 站点资源证明材料.docx            # 资源证明
 └── README.md                       # 说明文档
 ```
 
