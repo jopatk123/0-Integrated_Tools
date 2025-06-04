@@ -60,9 +60,6 @@
 - **一致主题**：统一的界面风格和用户体验
 - **工作流整合**：从GPS提取到图片处理的完整流程
 
-### 🎥 视频处理工具
-- **视频压缩**：高效的视频文件压缩和格式转换
-
 ### 📄 格式转换工具
 - **Markdown ↔ Word转换**：支持Markdown文件与Word文档的双向转换
   - 🔤 保留标题层级结构（H1-H6）
@@ -99,6 +96,7 @@
 - 城市名称或详细地址查询
 - 常用城市快捷按钮
 - 实时天气信息显示
+- 天气数据导出功能
 
 #### 🔄 格式转换
 - **Excel ↔ KML互转**：支持地理数据格式转换
@@ -112,58 +110,104 @@
 - **配置管理**：统一的设置和API密钥管理
 - **主题支持**：一致的界面主题
 
-### 📊 Excel图片提取
-- 从Excel文件中批量提取图片
+### 📊 Excel图片提取工具
+- **图片提取**：从Excel文件中提取嵌入的图片
+- **批量处理**：支持多个Excel文件的批量处理
+- **格式保持**：保持原始图片格式和质量
 
-### 📍 最近点位匹配
-- 地理位置点位匹配分析
-- 距离计算和最优匹配
+### 🎯 最近点位匹配工具
+- **距离计算**：计算两组坐标点之间的最短距离
+- **批量匹配**：支持大量坐标点的批量匹配
+- **结果导出**：支持匹配结果的导出功能
+- **模板生成**：提供坐标数据模板生成功能
 
 ### ⚙️ 系统功能
 - **主题管理**：支持多种界面主题
 - **配置管理**：个性化设置和配置保存
 - **历史记录**：操作历史记录和快速重用
 
-## 📦 安装和使用
+## 🛠️ 技术栈
 
-### 前置要求
+### 核心技术
+- **Python 3.13**：主要开发语言
+- **Tkinter**：图形用户界面框架
+- **uv**：Python包管理和环境管理工具
 
-- **Python 3.8+**
-- **uv包管理器** - [安装指南](https://docs.astral.sh/uv/getting-started/installation/)
-- **高德地图API密钥**（仅地图功能需要） - [申请地址](https://console.amap.com/dev/key/app)
+### 主要依赖
+- **数据处理**：pandas, numpy, openpyxl
+- **图像处理**：opencv-python, pillow, piexif
+- **地理空间**：geopy, requests（高德地图API）
+- **文档处理**：python-docx, markdown, beautifulsoup4
+- **可视化**：matplotlib
+- **工具库**：pyperclip, send2trash, python-dotenv
+- **打包部署**：pyinstaller
 
-#### 格式转换功能依赖
-- **python-docx** - Word文档处理
-- **markdown** - Markdown解析和转换
-- **beautifulsoup4** - HTML解析
-- **re** - 正则表达式处理（Python内置）
+### 项目特点
+- **模块化设计**：每个功能模块独立开发，便于维护和扩展
+- **统一主题**：采用一致的UI设计风格
+- **配置管理**：支持环境变量和用户配置文件
+- **API集成**：集成高德地图Web服务API
+- **跨平台**：基于Python和Tkinter，支持Windows、macOS、Linux
+
+## 📦 安装与使用
+
+### 环境要求
+- **Python 3.13**（推荐使用最新版本）
+- **Windows 11**（主要开发和测试环境）
+- **uv**：Python包管理工具
+
+### 安装步骤
+
+1. **克隆项目**
+   ```bash
+   git clone [项目地址]
+   cd IntegratedTools
+   ```
+
+2. **安装uv**（如果尚未安装）
+   ```bash
+   # Windows
+   powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+   ```
+
+3. **安装项目依赖**
+   ```bash
+   # uv会自动创建虚拟环境并安装依赖
+   uv sync
+   ```
+
+4. **配置环境变量**（可选但推荐）
+   - 复制 `.env.template` 为 `.env`
+   - 填入您的高德地图API密钥：
+     ```
+     AMAP_API_KEY=your_actual_api_key_here
+     ```
+   - 获取API密钥：[高德开放平台](https://console.amap.com/dev/key/app)
+
+5. **运行程序**
+   ```bash
+   # 使用uv运行
+   uv run python main.py
+   
+   # 或者使用提供的启动脚本（Windows）
+   start.bat
+   ```
 
 ### 快速开始
 
-1. **克隆或下载项目**
-   ```bash
-   git clone <repository-url>
-   cd Integrated_Tools
-   ```
+1. **启动程序**：双击 `start.bat` 或运行 `uv run python main.py`
+2. **选择功能**：在主界面的选项卡中选择需要使用的工具
+3. **配置设置**：首次使用地理空间工具时，请配置高德地图API密钥
+4. **开始使用**：按照各工具界面的提示操作即可
 
-2. **使用快速启动脚本（推荐）**
-   ```bash
-   # Windows
-   start.bat
-   ```
-   
-   或手动启动：
-   ```bash
-   # 创建虚拟环境并安装依赖
-   uv sync
-   
-   # 启动应用
-   uv run python main.py
-   ```
+### 功能模块说明
 
-3. **配置API密钥**（可选）
-   - 如需使用地理空间工具的高德地图功能，首次启动时会提示输入API密钥
-   - 其他工具无需额外配置即可使用
+- **系统文件处理**：文件路径获取、批量重命名、文件整理、时间分类
+- **最近点位匹配**：坐标点距离计算和匹配
+- **图片处理工具集**：GPS坐标提取、图片批量处理
+- **Excel图片提取**：从Excel文件中提取嵌入图片
+- **地理空间工具集**：POI搜索、路径规划、地理编码、坐标转换、天气查询
+- **格式转换工具**：文档、图片、视频、音频格式转换
 
 ## 📖 使用指南
 
@@ -266,83 +310,145 @@
 5. 点击"转换为Markdown"按钮
 6. 选择保存位置完成转换
 
-## 📁 项目结构
+## 🔧 配置说明
+
+### API密钥配置
+
+#### 高德地图API（地理空间功能必需）
+1. 访问 [高德开放平台](https://console.amap.com/dev/key/app)
+2. 注册账号并创建应用
+3. 获取Web服务API Key
+4. 配置方式：
+   - **环境变量**：在 `.env` 文件中设置 `AMAP_API_KEY`
+   - **程序内配置**：在地理空间工具的配置管理中设置
+
+### 配置文件说明
+
+- **`config.py`**：全局配置管理类
+- **`user_config.json`**：用户个人配置文件
+- **`user_history.json`**：用户操作历史记录
+- **`.env`**：环境变量配置文件
+
+### 个人偏好设置
+
+程序支持丰富的个人偏好设置：
+- **界面设置**：主题、窗口大小、自动保存
+- **收藏管理**：常用位置、常用城市
+- **历史记录**：操作历史、搜索历史
+- **缓存设置**：缓存开关、缓存时长、缓存大小
+- **坐标转换**：默认坐标系、转换精度
+
+### 项目配置
+
+- **`pyproject.toml`**：项目依赖和元数据配置
+- **`.python-version`**：指定Python版本（3.13）
+- **`uv.lock`**：依赖版本锁定文件
+
+## 📁 详细项目结构
 
 ```
-Integrated_Tools/
-├── app/
+IntegratedTools/
+├── app/                          # 主应用程序模块
 │   ├── __init__.py
-│   ├── integrated_tool.py          # 主应用集成类
-│   ├── ui/                         # 用户界面模块
+│   ├── config.py                 # 应用配置管理
+│   ├── integrated_tool.py        # 主应用程序类
+│   ├── ui/                       # 用户界面模块
 │   │   ├── __init__.py
-│   │   ├── geospatial_tool.py      # 统一的地理空间工具集
-│   │   ├── geospatial/             # 地理空间工具模块（整合了原amap和geospatial功能）
-│   │   │   ├── __init__.py
-│   │   │   ├── amap_api.py         # 高德地图API接口
-│   │   │   ├── conversion_tab.py   # 格式转换界面
-│   │   │   ├── coordinate_utils.py # 坐标工具
-│   │   │   ├── dialogs.py          # 配置对话框（包含ConfigDialog和ApiKeyDialog）
-│   │   │   ├── geocoding_tab.py    # 地理编码界面
-│   │   │   ├── kml_utils.py        # KML工具
-│   │   │   ├── poi_search_tab.py   # POI搜索界面
-│   │   │   ├── route_tab.py        # 路径规划界面
-│   │   │   ├── utils.py            # 工具函数
-│   │   │   └── weather_tab.py      # 天气查询界面
-│   │   ├── image_processor_tool.py # 统一的图片处理工具集
-│   │   ├── image_processor/        # 图片处理工具模块（整合了原GPS提取和图片处理功能）
-│   │   │   ├── __init__.py
-│   │   │   ├── processor_tab.py    # 图片处理界面
-│   │   │   └── gps_extractor_tab.py # GPS提取界面
-│   │   ├── file_path/              # 文件路径工具模块
-│   │   │   └── path_tab.py         # 路径获取界面
-│   │   ├── rename/                 # 重命名工具模块
-│   │   │   ├── rename_tab.py       # 重命名界面
-│   │   │   └── template_generator.py # 模板生成器
-│   │   ├── file_organizer/         # 文件整理工具模块
-│   │   │   └── organizer_tab.py    # 整理界面
-│   │   ├── file_sorter/            # 文件分类工具模块
-│   │   │   └── sorter_tab.py       # 分类界面
-│   │   ├── video_resizer/          # 视频压缩工具模块
-│   │   │   └── feature_tab.py      # 功能界面
-│   │   ├── excel_image_extractor/  # Excel图片提取模块
-│   │   │   └── extractor_tab.py    # 提取界面
-│   │   ├── format_converter/       # 格式转换工具模块
-│   │   │   └── converter_tab.py    # 转换界面
-│   │   ├── point_matcher/          # 点位匹配工具模块
-│   │   │   ├── point_matcher_tab.py # 匹配界面
-│   │   │   ├── distance_calculator.py # 距离计算
-│   │   │   └── template_generator.py # 模板生成器
-│   │   ├── file_path_tool.py       # 文件路径工具主类
-│   │   ├── rename_tool.py          # 重命名工具主类
-│   │   ├── file_organizer_tool.py  # 文件整理工具主类
-│   │   ├── file_sorter_tool.py     # 文件分类工具主类
-│   │   ├── video_resizer_tool.py   # 视频压缩工具主类
-│   │   ├── excel_image_extractor_tool.py # Excel图片提取主类
-│   │   ├── format_converter_tool.py # 格式转换工具主类
-│   │   └── point_matcher_tool.py   # 点位匹配工具主类
-│   └── utils/                      # 工具库
-│       ├── amap_api.py             # 高德地图API
-│       ├── coordinate_converter.py  # 坐标转换
-│       ├── file_operations.py      # 文件操作
-│       ├── history_manager.py      # 历史管理
-│       └── theme.py                # 主题管理
-├── config.py                       # 配置管理
-├── main.py                         # 应用入口
-├── pyproject.toml                  # 项目配置（uv包管理）
-├── uv.lock                         # uv锁定文件
-├── start.bat                       # 启动脚本
-├── user_config.json              # 用户配置
-├── user_history.json              # 用户历史
-└── README.md                       # 说明文档
+│   │   ├── system_file_tool.py   # 系统文件处理工具主界面
+│   │   ├── system_files/         # 系统文件处理子模块
+│   │   │   ├── path_tab.py       # 文件路径获取
+│   │   │   ├── rename_tab.py     # 批量重命名
+│   │   │   ├── organizer_tab.py  # 文件整理
+│   │   │   └── sorter_tab.py     # 时间分类
+│   │   ├── image_processor_tool.py # 图片处理工具主界面
+│   │   ├── image_processor/      # 图片处理子模块
+│   │   │   ├── gps_extractor_tab.py # GPS提取
+│   │   │   └── processor_tab.py  # 图片处理
+│   │   ├── geospatial_tool.py    # 地理空间工具主界面
+│   │   ├── geospatial/           # 地理空间子模块
+│   │   │   ├── poi_search_tab.py # POI搜索
+│   │   │   ├── route_tab.py      # 路径规划
+│   │   │   ├── geocoding_tab.py  # 地理编码
+│   │   │   ├── conversion_tab.py # 坐标转换
+│   │   │   └── weather_tab.py    # 天气查询
+│   │   ├── format_converter_tool.py # 格式转换工具主界面
+│   │   ├── format_converter/     # 格式转换子模块
+│   │   │   ├── converter_tab.py  # 文档转换
+│   │   │   ├── image_converter_tab.py # 图片转换
+│   │   │   ├── video_converter_tab.py # 视频转换
+│   │   │   └── audio_converter_tab.py # 音频转换
+│   │   ├── point_matcher_tool.py # 点位匹配工具
+│   │   ├── point_matcher/        # 点位匹配子模块
+│   │   ├── excel_image_extractor_tool.py # Excel图片提取工具
+│   │   └── excel_image_extractor/ # Excel图片提取子模块
+│   └── utils/                    # 工具类和辅助功能
+│       ├── __init__.py
+│       ├── amap_api.py           # 高德地图API接口
+│       ├── coordinate_converter.py # 坐标转换工具
+│       ├── file_operations.py    # 文件操作工具
+│       ├── history_manager.py    # 历史记录管理
+│       └── theme.py              # 主题管理
+├── config.py                     # 全局配置类
+├── main.py                       # 程序启动入口
+├── pyproject.toml               # 项目配置和依赖
+├── uv.lock                      # 依赖版本锁定
+├── .python-version              # Python版本指定
+├── start.bat                    # Windows启动脚本
+├── .env.template                # 环境变量模板
+├── .gitignore                   # Git忽略文件
+├── user_config.json             # 用户配置文件
+├── user_history.json            # 用户历史记录
+└── README.md                    # 项目说明文档
 ```
 
-## 🔧 配置文件
+## 🚀 部署和打包
 
-应用会自动创建以下配置文件：
+### 开发环境运行
+```bash
+# 使用uv运行（推荐）
+uv run python main.py
 
-- `user_config.json` - 用户个人配置
-- `user_history.json` - 操作历史记录
-- `config.py` - 应用配置管理
+# 或使用启动脚本
+start.bat
+```
+
+### 打包为可执行文件
+项目已配置PyInstaller，可以打包为独立的可执行文件：
+
+```bash
+# 安装打包依赖
+uv add pyinstaller
+
+# 打包（如果有spec文件）
+uv run pyinstaller IntegratedTools.spec
+
+# 或者直接打包
+uv run pyinstaller --onefile --windowed main.py
+```
+
+## 🔍 故障排除
+
+### 常见问题
+
+1. **高德地图API不可用**
+   - 检查网络连接
+   - 确认API密钥配置正确
+   - 验证API密钥是否有效且有足够配额
+
+2. **依赖安装失败**
+   - 确保使用Python 3.13
+   - 尝试更新uv：`uv self update`
+   - 清除缓存：`uv cache clean`
+
+3. **界面显示异常**
+   - 检查系统DPI设置
+   - 确保Tkinter正确安装
+   - 尝试重置用户配置文件
+
+### 日志和调试
+- 程序运行时的错误信息会显示在控制台
+- 用户配置和历史记录保存在JSON文件中
+- 可以通过删除配置文件来重置程序设置
 
 ## 🚀 新功能特性
 
@@ -397,48 +503,55 @@ Integrated_Tools/
 - **格式检查**：转换前验证文件格式
 - **错误提示**：详细的错误信息和解决建议
 
-## ⚙️ 环境配置
+## ## 🤝 贡献指南
 
-### 🔐 API密钥配置
+欢迎贡献代码！请遵循以下步骤：
 
-为了保护敏感信息，本项目使用环境变量管理API密钥：
+1. Fork 本项目
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启 Pull Request
 
-1. **复制环境变量模板**：
-   ```bash
-   cp .env.template .env
-   ```
+### 代码规范
+- 遵循 PEP 8 Python 代码规范
+- 使用中文注释和文档字符串
+- 保持模块化设计原则
+- 确保新功能有相应的错误处理
 
-2. **编辑 `.env` 文件**，填入你的API密钥：
-   ```bash
-   # 高德地图API密钥
-   AMAP_API_KEY=your_actual_api_key_here
-   ```
+### 开发环境设置
+```bash
+# 克隆项目
+git clone [项目地址]
+cd IntegratedTools
 
-3. **安装依赖**：
-   ```bash
-   uv sync
-   ```
+# 安装开发依赖
+uv sync --dev
 
-### 🔑 API密钥申请（高德地图功能）
+# 运行测试
+uv run python -m pytest
+```
 
-1. 访问[高德开放平台](https://console.amap.com/dev/key/app)
-2. 注册并登录账号
-3. 创建新应用
-4. 申请"Web服务API"密钥
-5. 将密钥配置到 `.env` 文件中
+## 📄 许可证
 
-### 📋 配置文件说明
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
 
-- `.env` - 环境变量配置（包含敏感信息，不会提交到仓库）
-- `.env.template` - 环境变量模板（可安全提交）
-- `user_config.json` - 用户偏好设置（不包含敏感信息）
+## 📞 联系方式
 
-### 🛡️ 安全说明
+如有问题或建议，请通过以下方式联系：
+- 提交 GitHub Issue
+- 发送邮件至 [your-email@example.com]
 
-- `.env` 文件已添加到 `.gitignore`，不会被提交到版本控制
-- API密钥优先从环境变量读取，确保安全性
-- 配置文件中的敏感信息已被移除
+## 🙏 致谢
+
+- 感谢高德地图提供的地理空间API服务
+- 感谢所有开源库的贡献者
+- 感谢所有为本项目做出贡献的开发者和用户
 
 ---
 
-**注意**：使用地理空间工具集的高德地图相关功能需要有效的API密钥。其他工具可以独立使用，无需额外配置。
+**注意**：
+- 本工具仅供学习和个人使用
+- 请遵守相关法律法规和API使用条款
+- 使用高德地图API需要遵守其服务条款
+- 建议在生产环境使用前进行充分测试

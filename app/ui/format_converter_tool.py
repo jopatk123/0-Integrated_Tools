@@ -4,6 +4,9 @@
 import tkinter as tk
 from tkinter import ttk
 from .format_converter.converter_tab import ConverterTab
+from .format_converter.image_converter_tab import ImageConverterTab
+from .format_converter.video_converter_tab import VideoConverterTab
+from .format_converter.audio_converter_tab import AudioConverterTab
 
 class FormatConverterTool:
     """格式转换工具主类"""
@@ -29,7 +32,14 @@ class FormatConverterTool:
         instruction_frame = tk.Frame(self.parent_frame, bg=self.theme.bg_color)
         instruction_frame.pack(fill=tk.X, pady=5)
         
-        instruction_text = "格式转换工具：支持Markdown与Word文档之间的相互转换。选择源文件和目标格式，点击转换即可。"
+        instruction_text = (
+            "格式转换工具支持多种文件格式的相互转换：\n\n"
+            "📄 文档转换：支持 Markdown 和 Word 文档的相互转换\n"
+            "🖼️ 图片转换：支持常用图片格式的批量转换和处理\n"
+            "🎬 视频转换：支持常用视频格式的转换和压缩\n"
+            "🎵 音频转换：支持常用音频格式的转换和处理\n\n"
+            "请选择相应的选项卡进行操作。"
+        )
         instruction_label = tk.Label(instruction_frame, text=instruction_text, 
                                   bg=self.theme.bg_color, justify=tk.LEFT, wraplength=980,
                                   font=("微软雅黑", 10))
@@ -51,13 +61,37 @@ class FormatConverterTool:
         self.notebook = ttk.Notebook(notebook_frame)
         self.notebook.pack(fill=tk.BOTH, expand=True)
         
-        # 格式转换选项卡
+        # 文档格式转换选项卡
         converter_frame = tk.Frame(self.notebook, bg=self.theme.bg_color)
-        self.notebook.add(converter_frame, text="格式转换")
+        self.notebook.add(converter_frame, text="📄 文档转换")
         
-        # 创建转换功能模块
+        # 创建文档转换功能模块
         self.converter_tab = ConverterTab(converter_frame, self.theme)
         self.converter_tab.update_status = self.update_status
+        
+        # 图片格式转换选项卡
+        image_converter_frame = tk.Frame(self.notebook, bg=self.theme.bg_color)
+        self.notebook.add(image_converter_frame, text="🖼️ 图片转换")
+        
+        # 创建图片转换功能模块
+        self.image_converter_tab = ImageConverterTab(image_converter_frame, self.theme)
+        self.image_converter_tab.update_status = self.update_status
+        
+        # 视频格式转换选项卡
+        video_converter_frame = tk.Frame(self.notebook, bg=self.theme.bg_color)
+        self.notebook.add(video_converter_frame, text="🎬 视频转换")
+        
+        # 创建视频转换功能模块
+        self.video_converter_tab = VideoConverterTab(video_converter_frame, self.theme)
+        self.video_converter_tab.update_status = self.update_status
+        
+        # 音频格式转换选项卡
+        audio_converter_frame = tk.Frame(self.notebook, bg=self.theme.bg_color)
+        self.notebook.add(audio_converter_frame, text="🎵 音频转换")
+        
+        # 创建音频转换功能模块
+        self.audio_converter_tab = AudioConverterTab(audio_converter_frame, self.theme)
+        self.audio_converter_tab.update_status = self.update_status
         
     def create_status_bar(self):
         """创建状态栏"""

@@ -20,4 +20,5 @@ dependencies = [
     "beautifulsoup4>=4.12.0",
     "python-docx>=0.8.11",
     "python-dotenv>=1.0.0",
+    "pyinstaller>=6.14.0",
 ]

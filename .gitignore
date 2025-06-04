@@ -36,3 +36,8 @@ env/
 # uv specific
 .uv/
 .uvenv/
+
+# PyInstaller生成的文件
+build/
+dist/
+*.spec

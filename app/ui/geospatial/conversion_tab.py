@@ -70,13 +70,31 @@ class ConversionTab:
                                                 command=self.convert_points_to_circles)
         self.point_to_circle_button.pack(fill=tk.X, expand=True)
         
-        # 第四行按钮 - Excel模板下载
+        # 第四行按钮 - Excel模板下载（醒目提示）
         row4_frame = ttk.Frame(button_frame)
-        row4_frame.pack(fill=tk.X, pady=5)
+        row4_frame.pack(fill=tk.X, pady=10)  # 增加间距
         
-        self.download_excel_template_button = ttk.Button(row4_frame, text="📥 下载Excel模板", 
+        # 创建醒目的提示框架
+        template_notice_frame = ttk.LabelFrame(row4_frame, text="⚠️ 重要提示")
+        template_notice_frame.pack(fill=tk.X, pady=5)
+        
+        # 提示文本
+        notice_text = ttk.Label(template_notice_frame, 
+                               text="📋 使用前请先下载对应的Excel模板文件，确保数据格式正确！",
+                               font=("微软雅黑", 10, "bold"),
+                               foreground="#d63384")  # 醒目的红色
+        notice_text.pack(pady=5)
+        
+        # 下载按钮 - 使用更醒目的样式
+        self.download_excel_template_button = ttk.Button(template_notice_frame, 
+                                                        text="📥 立即下载Excel模板", 
                                                         command=self.download_excel_templates)
-        self.download_excel_template_button.pack(fill=tk.X, expand=True)
+        self.download_excel_template_button.pack(fill=tk.X, expand=True, pady=5)
+        
+        # 配置按钮样式使其更醒目
+        style = ttk.Style()
+        style.configure("Accent.TButton", font=("微软雅黑", 11, "bold"))
+        self.download_excel_template_button.configure(style="Accent.TButton")
         
         # 说明文本
         info_frame = ttk.LabelFrame(main_frame, text="使用说明")

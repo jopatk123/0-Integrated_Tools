@@ -178,8 +178,7 @@ class ConverterTab:
         if filename:
             self.source_path_var.set(filename)
             # 自动设置输出目录为源文件所在目录
-            if not self.output_dir_var.get():
-                self.output_dir_var.set(os.path.dirname(filename))
+            self.output_dir_var.set(os.path.dirname(filename))
                 
     def browse_output_dir(self):
         """浏览选择输出目录"""
