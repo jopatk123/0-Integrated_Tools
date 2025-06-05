@@ -9,6 +9,9 @@ import queue
 import os
 import random
 import math
+import piexif
+from datetime import datetime
+import string
 
 class ProcessorTab:
     """图像处理选项卡"""
@@ -236,6 +239,32 @@ class ProcessorTab:
                                     bg=self.theme.bg_color, fg=self.theme.text_color,
                                     font=("微软雅黑", 9))
         overwrite_cb.pack(padx=5, pady=5)
+        
+        # 哈希修改设置
+        hash_frame = tk.LabelFrame(advanced_frame, text="🔐 哈希修改", 
+                                 bg=self.theme.bg_color, fg=self.theme.text_color,
+                                 font=("微软雅黑", 9, "bold"))
+        hash_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        hash_control_frame = tk.Frame(hash_frame, bg=self.theme.bg_color)
+        hash_control_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        hash_btn = tk.Button(hash_control_frame, text="修改哈希值", command=self.modify_hash_images,
+                           bg=self.theme.button_color, fg="white",
+                           font=("微软雅黑", 9), relief=tk.RAISED, bd=2)
+        hash_btn.pack(side=tk.LEFT)
+        
+        # 哈希修改选项
+        self.preserve_original_hash = tk.BooleanVar(value=False)
+        preserve_cb = tk.Checkbutton(hash_control_frame, text="保留原图", 
+                                   variable=self.preserve_original_hash,
+                                   bg=self.theme.bg_color, fg=self.theme.text_color,
+                                   font=("微软雅黑", 9))
+        preserve_cb.pack(side=tk.LEFT, padx=(20, 0))
+        
+        tk.Label(hash_frame, text="通过修改EXIF数据和添加随机数据来改变图片哈希值", 
+               bg=self.theme.bg_color, fg=self.theme.accent_color,
+               font=("微软雅黑", 8)).pack(padx=5, pady=2)
     
     def create_output_tab(self, notebook):
         """创建输出设置选项卡"""
@@ -809,3 +838,147 @@ class ProcessorTab:
         if self.update_status:
             self.update_status(message)
         self.display_current_image()
+    
+    def modify_hash_images(self):
+        """修改图片哈希值"""
+        if not self.processed_images:
+            messagebox.showerror("错误", "没有加载图片")
+            return
+        
+        preserve_original = self.preserve_original_hash.get()
+        
+        if self.update_status:
+            self.update_status("正在修改图片哈希值...")
+        threading.Thread(target=self._modify_hash_images_thread, args=(preserve_original,), daemon=True).start()
+    
+    def _modify_hash_images_thread(self, preserve_original):
+        """在后台线程中修改图片哈希值"""
+        total_images = len(self.processed_images)
+        processed_count = 0
+        
+        for i, img_data in enumerate(self.processed_images):
+            try:
+                img = img_data['image']
+                original_path = img_data['path']
+                
+                # 修改图片哈希值
+                modified_img = self._modify_single_image_hash(img, original_path)
+                
+                if modified_img:
+                    # 如果不保留原图，则替换当前图片
+                    if not preserve_original:
+                        self.processed_images[i]['image'] = modified_img
+                    
+                    processed_count += 1
+                
+                # 每处理5张图片更新一次状态
+                if processed_count % 5 == 0 and self.update_status:
+                    self.parent.after(0, lambda count=processed_count: 
+                                   self.update_status(f"正在修改哈希值... {count}/{total_images}"))
+                
+            except Exception as e:
+                print(f"修改图片哈希值失败: {e}")
+        
+        # 更新UI
+        self.parent.after(0, lambda: self._update_after_process(f"哈希修改完成: 成功处理 {processed_count} 张图片"))
+    
+    def _modify_single_image_hash(self, img, original_path):
+        """修改单张图片的哈希值"""
+        try:
+            # 创建图片副本
+            modified_img = img.copy()
+            
+            # 获取原始图片格式
+            original_format = img.format if img.format else 'JPEG'
+            
+            # 创建新的EXIF数据（仅对JPEG格式）
+            if original_format.upper() in ['JPEG', 'JPG']:
+                try:
+                    exif_dict = {"0th":{}, "Exif":{}, "GPS":{}, "1st":{}, "thumbnail":None}
+                    exif_dict["0th"][piexif.ImageIFD.Make] = f"Modified_{self._generate_random_string()}"
+                    exif_dict["0th"][piexif.ImageIFD.DateTime] = datetime.now().strftime("%Y:%m:%d %H:%M:%S")
+                    exif_dict["0th"][piexif.ImageIFD.Software] = f"HashModifier_{self._generate_random_string(5)}"
+                    
+                    # 添加一些随机的EXIF数据
+                    exif_dict["Exif"][piexif.ExifIFD.UserComment] = f"Hash_{self._generate_random_string(20)}".encode('utf-8')
+                    
+                    # 将EXIF数据转换为字节
+                    exif_bytes = piexif.dump(exif_dict)
+                    
+                    # 创建临时文件来保存带有新EXIF的图片
+                    import tempfile
+                    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as temp_file:
+                        temp_path = temp_file.name
+                    
+                    # 保存图片到临时文件
+                    if modified_img.mode == 'RGBA':
+                        modified_img = modified_img.convert('RGB')
+                    modified_img.save(temp_path, 'JPEG', exif=exif_bytes)
+                    
+                    # 添加随机数据到文件末尾
+                    with open(temp_path, 'ab') as f:
+                        f.write(os.urandom(random.randint(10, 100)))
+                    
+                    # 重新加载修改后的图片
+                    modified_img = Image.open(temp_path)
+                    modified_img.load()  # 确保图片数据被加载
+                    
+                    # 删除临时文件
+                    try:
+                        os.unlink(temp_path)
+                    except:
+                        pass
+                        
+                except Exception as e:
+                    print(f"EXIF处理失败: {e}")
+                    # 如果EXIF处理失败，至少进行像素级别的微调
+                    modified_img = self._apply_pixel_modification(modified_img)
+            else:
+                # 对于PNG等格式，进行像素级别的微调
+                modified_img = self._apply_pixel_modification(modified_img)
+            
+            return modified_img
+            
+        except Exception as e:
+            print(f"修改图片哈希值时出错: {e}")
+            return None
+    
+    def _apply_pixel_modification(self, img):
+        """对图片进行微小的像素修改"""
+        try:
+            # 创建图片副本
+            modified_img = img.copy()
+            pixels = modified_img.load()
+            width, height = modified_img.size
+            
+            # 随机选择几个像素点进行微调（不超过10个点）
+            num_modifications = min(10, width * height // 10000)
+            
+            for _ in range(num_modifications):
+                x = random.randint(0, width - 1)
+                y = random.randint(0, height - 1)
+                
+                if modified_img.mode == 'RGB':
+                    r, g, b = pixels[x, y]
+                    # 对RGB值进行微小调整（±1）
+                    r = max(0, min(255, r + random.choice([-1, 1])))
+                    g = max(0, min(255, g + random.choice([-1, 1])))
+                    b = max(0, min(255, b + random.choice([-1, 1])))
+                    pixels[x, y] = (r, g, b)
+                elif modified_img.mode == 'RGBA':
+                    r, g, b, a = pixels[x, y]
+                    r = max(0, min(255, r + random.choice([-1, 1])))
+                    g = max(0, min(255, g + random.choice([-1, 1])))
+                    b = max(0, min(255, b + random.choice([-1, 1])))
+                    pixels[x, y] = (r, g, b, a)
+            
+            return modified_img
+            
+        except Exception as e:
+            print(f"像素修改失败: {e}")
+            return img
+    
+    def _generate_random_string(self, length=10):
+        """生成随机字符串"""
+        letters = string.ascii_letters + string.digits
+        return ''.join(random.choice(letters) for _ in range(length))

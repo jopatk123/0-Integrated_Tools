@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+from app.ui.calculation_tool import CalculationTool
 from app.ui.system_file_tool import SystemFileTool
 from app.ui.point_matcher_tool import PointMatcherTool
 from app.ui.image_processor_tool import ImageProcessorTool
@@ -38,6 +39,7 @@ class IntegratedTool:
         self.notebook.pack(fill=tk.BOTH, expand=True)
         
         # 创建选项卡的框架
+        self.calculation_frame = ttk.Frame(self.notebook)
         self.system_file_frame = ttk.Frame(self.notebook)
         self.point_matcher_frame = ttk.Frame(self.notebook)
         self.image_processor_frame = ttk.Frame(self.notebook)
@@ -46,7 +48,8 @@ class IntegratedTool:
         self.format_converter_frame = ttk.Frame(self.notebook)
 
         
-        # 添加选项卡
+        # 添加选项卡（计算选项卡作为第一个）
+        self.notebook.add(self.calculation_frame, text="计算")
         self.notebook.add(self.system_file_frame, text="系统文件处理")
         self.notebook.add(self.point_matcher_frame, text="最近点位匹配")
         self.notebook.add(self.image_processor_frame, text="图片处理工具集")
@@ -54,6 +57,9 @@ class IntegratedTool:
         self.notebook.add(self.geospatial_frame, text="地理空间工具集")
         self.notebook.add(self.format_converter_frame, text="格式转换工具")
 
+        
+        # 初始化计算工具界面
+        self.calculation_tool = CalculationTool(self.calculation_frame, self.theme)
         
         # 初始化系统文件处理工具界面
         self.system_file_tool = SystemFileTool(self.system_file_frame, self.theme, self.config)

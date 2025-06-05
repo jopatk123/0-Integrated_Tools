@@ -36,7 +36,7 @@ class ImageProcessorTool:
         instruction_frame = tk.Frame(self.parent_frame, bg=self.theme.bg_color)
         instruction_frame.pack(fill=tk.X, pady=5)
         
-        instruction_text = "图片处理工具集：提供图片GPS坐标提取、批量图片处理、尺寸调整、裁剪、旋转、压缩等功能。"
+        instruction_text = "图片处理工具集：提供图片GPS坐标提取、批量图片处理、尺寸调整、裁剪、旋转、压缩、哈希修改等功能。"
         instruction_label = tk.Label(instruction_frame, text=instruction_text, 
                                   bg=self.theme.bg_color, fg=self.theme.text_color,
                                   justify=tk.LEFT, wraplength=980,
