@@ -1,0 +1,90 @@
+Date : 2025-06-05 22:01:57
+Directory : c:\4-code\0-Integrated_Tools\app\ui\calculation
+Total : 54 files,  -8693 codes, -1085 comments, -2280 blanks, all -12058 lines
+
+Languages
++----------+------------+------------+------------+------------+------------+
+| language | files      | code       | comment    | blank      | total      |
++----------+------------+------------+------------+------------+------------+
+| Python   |         54 |     -8,693 |     -1,085 |     -2,280 |    -12,058 |
++----------+------------+------------+------------+------------+------------+
+
+Directories
++-----------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                        | files      | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                           |         54 |     -8,693 |     -1,085 |     -2,280 |    -12,058 |
+| ..                                                                          |         54 |     -8,693 |     -1,085 |     -2,280 |    -12,058 |
+| .. (Files)                                                                  |          9 |       -694 |       -118 |       -198 |     -1,010 |
+| ..\..                                                                       |          9 |       -749 |        -53 |       -153 |       -955 |
+| ..\.. (Files)                                                               |          3 |        -56 |        -18 |        -21 |        -95 |
+| ..\..\utils                                                                 |          6 |       -693 |        -35 |       -132 |       -860 |
+| ..\excel_image_extractor                                                    |          2 |       -194 |        -23 |        -63 |       -280 |
+| ..\format_converter                                                         |          5 |     -1,581 |       -228 |       -443 |     -2,252 |
+| ..\geospatial                                                               |         11 |     -2,258 |       -227 |       -571 |     -3,056 |
+| ..\image_processor                                                          |          3 |     -1,011 |       -132 |       -290 |     -1,433 |
+| ..\mini_games                                                               |          5 |       -957 |       -107 |       -210 |     -1,274 |
+| ..\point_matcher                                                            |          4 |       -352 |        -48 |        -94 |       -494 |
+| ..\system_files                                                             |          6 |       -897 |       -149 |       -258 |     -1,304 |
++-----------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-----------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| filename                                                                    | language | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------------+----------+------------+------------+------------+------------+
+| c:\4-code\0-Integrated_Tools\app\__init__.py                                | Python   |          0 |         -1 |          0 |         -1 |
+| c:\4-code\0-Integrated_Tools\app\config.py                                  | Python   |         -3 |         -3 |         -2 |         -8 |
+| c:\4-code\0-Integrated_Tools\app\integrated_tool.py                         | Python   |        -53 |        -14 |        -19 |        -86 |
+| c:\4-code\0-Integrated_Tools\app\ui\__init__.py                             | Python   |          0 |         -1 |          0 |         -1 |
+| c:\4-code\0-Integrated_Tools\app\ui\calculation_tool.py                     | Python   |        -48 |        -11 |        -19 |        -78 |
+| c:\4-code\0-Integrated_Tools\app\ui\excel_image_extractor\__init__.py       | Python   |         -1 |         -1 |          0 |         -2 |
+| c:\4-code\0-Integrated_Tools\app\ui\excel_image_extractor\extractor_tab.py  | Python   |       -193 |        -22 |        -63 |       -278 |
+| c:\4-code\0-Integrated_Tools\app\ui\excel_image_extractor_tool.py           | Python   |        -40 |        -11 |        -15 |        -66 |
+| c:\4-code\0-Integrated_Tools\app\ui\format_converter\__init__.py            | Python   |         -1 |         -1 |          0 |         -2 |
+| c:\4-code\0-Integrated_Tools\app\ui\format_converter\audio_converter_tab.py | Python   |       -435 |        -64 |       -123 |       -622 |
+| c:\4-code\0-Integrated_Tools\app\ui\format_converter\converter_tab.py       | Python   |       -391 |        -45 |        -98 |       -534 |
+| c:\4-code\0-Integrated_Tools\app\ui\format_converter\image_converter_tab.py | Python   |       -324 |        -48 |        -98 |       -470 |
+| c:\4-code\0-Integrated_Tools\app\ui\format_converter\video_converter_tab.py | Python   |       -430 |        -70 |       -124 |       -624 |
+| c:\4-code\0-Integrated_Tools\app\ui\format_converter_tool.py                | Python   |        -69 |        -16 |        -23 |       -108 |
+| c:\4-code\0-Integrated_Tools\app\ui\geospatial\__init__.py                  | Python   |         -1 |         -1 |          0 |         -2 |
+| c:\4-code\0-Integrated_Tools\app\ui\geospatial\amap_api.py                  | Python   |       -100 |         -1 |        -15 |       -116 |
+| c:\4-code\0-Integrated_Tools\app\ui\geospatial\conversion_tab.py            | Python   |       -485 |        -44 |       -111 |       -640 |
+| c:\4-code\0-Integrated_Tools\app\ui\geospatial\coordinate_utils.py          | Python   |        -51 |         -2 |         -6 |        -59 |
+| c:\4-code\0-Integrated_Tools\app\ui\geospatial\dialogs.py                   | Python   |       -250 |        -28 |        -72 |       -350 |
+| c:\4-code\0-Integrated_Tools\app\ui\geospatial\geocoding_tab.py             | Python   |       -200 |        -37 |        -60 |       -297 |
+| c:\4-code\0-Integrated_Tools\app\ui\geospatial\kml_utils.py                 | Python   |        -96 |        -10 |        -25 |       -131 |
+| c:\4-code\0-Integrated_Tools\app\ui\geospatial\poi_search_tab.py            | Python   |       -249 |        -18 |        -58 |       -325 |
+| c:\4-code\0-Integrated_Tools\app\ui\geospatial\route_tab.py                 | Python   |       -318 |        -28 |        -72 |       -418 |
+| c:\4-code\0-Integrated_Tools\app\ui\geospatial\utils.py                     | Python   |       -339 |        -35 |       -101 |       -475 |
+| c:\4-code\0-Integrated_Tools\app\ui\geospatial\weather_tab.py               | Python   |       -169 |        -23 |        -51 |       -243 |
+| c:\4-code\0-Integrated_Tools\app\ui\geospatial_tool.py                      | Python   |       -222 |        -23 |        -45 |       -290 |
+| c:\4-code\0-Integrated_Tools\app\ui\image_processor\__init__.py             | Python   |         -3 |         -1 |          0 |         -4 |
+| c:\4-code\0-Integrated_Tools\app\ui\image_processor\gps_extractor_tab.py    | Python   |       -311 |        -44 |        -90 |       -445 |
+| c:\4-code\0-Integrated_Tools\app\ui\image_processor\processor_tab.py        | Python   |       -697 |        -87 |       -200 |       -984 |
+| c:\4-code\0-Integrated_Tools\app\ui\image_processor_tool.py                 | Python   |        -62 |        -14 |        -20 |        -96 |
+| c:\4-code\0-Integrated_Tools\app\ui\mini_games\__init__.py                  | Python   |         -1 |         -1 |          0 |         -2 |
+| c:\4-code\0-Integrated_Tools\app\ui\mini_games\game2048.py                  | Python   |       -258 |        -37 |        -67 |       -362 |
+| c:\4-code\0-Integrated_Tools\app\ui\mini_games\minesweeper_game.py          | Python   |       -159 |        -21 |        -36 |       -216 |
+| c:\4-code\0-Integrated_Tools\app\ui\mini_games\snake_game.py                | Python   |       -176 |        -20 |        -41 |       -237 |
+| c:\4-code\0-Integrated_Tools\app\ui\mini_games\tetris_game.py               | Python   |       -363 |        -28 |        -66 |       -457 |
+| c:\4-code\0-Integrated_Tools\app\ui\mini_games_tool.py                      | Python   |       -117 |        -18 |        -34 |       -169 |
+| c:\4-code\0-Integrated_Tools\app\ui\point_matcher\__init__.py               | Python   |         -5 |         -1 |         -2 |         -8 |
+| c:\4-code\0-Integrated_Tools\app\ui\point_matcher\distance_calculator.py    | Python   |        -45 |         -5 |        -12 |        -62 |
+| c:\4-code\0-Integrated_Tools\app\ui\point_matcher\point_matcher_tab.py      | Python   |       -236 |        -37 |        -67 |       -340 |
+| c:\4-code\0-Integrated_Tools\app\ui\point_matcher\template_generator.py     | Python   |        -66 |         -5 |        -13 |        -84 |
+| c:\4-code\0-Integrated_Tools\app\ui\point_matcher_tool.py                   | Python   |        -47 |        -10 |        -17 |        -74 |
+| c:\4-code\0-Integrated_Tools\app\ui\system_file_tool.py                     | Python   |        -89 |        -14 |        -25 |       -128 |
+| c:\4-code\0-Integrated_Tools\app\ui\system_files\__init__.py                | Python   |         -6 |         -2 |         -2 |        -10 |
+| c:\4-code\0-Integrated_Tools\app\ui\system_files\organizer_tab.py           | Python   |       -217 |        -39 |        -65 |       -321 |
+| c:\4-code\0-Integrated_Tools\app\ui\system_files\path_tab.py                | Python   |       -304 |        -56 |        -80 |       -440 |
+| c:\4-code\0-Integrated_Tools\app\ui\system_files\rename_tab.py              | Python   |       -188 |        -30 |        -60 |       -278 |
+| c:\4-code\0-Integrated_Tools\app\ui\system_files\sorter_tab.py              | Python   |       -144 |        -18 |        -43 |       -205 |
+| c:\4-code\0-Integrated_Tools\app\ui\system_files\template_generator.py      | Python   |        -38 |         -4 |         -8 |        -50 |
+| c:\4-code\0-Integrated_Tools\app\utils\__init__.py                          | Python   |         -2 |         -1 |         -1 |         -4 |
+| c:\4-code\0-Integrated_Tools\app\utils\amap_api.py                          | Python   |       -282 |         -5 |        -51 |       -338 |
+| c:\4-code\0-Integrated_Tools\app\utils\coordinate_converter.py              | Python   |       -115 |         -9 |        -25 |       -149 |
+| c:\4-code\0-Integrated_Tools\app\utils\file_operations.py                   | Python   |       -111 |         -2 |        -13 |       -126 |
+| c:\4-code\0-Integrated_Tools\app\utils\history_manager.py                   | Python   |       -165 |        -17 |        -41 |       -223 |
+| c:\4-code\0-Integrated_Tools\app\utils\theme.py                             | Python   |        -18 |         -1 |         -1 |        -20 |
+| Total                                                                       |          |     -8,693 |     -1,085 |     -2,280 |    -12,058 |
++-----------------------------------------------------------------------------+----------+------------+------------+------------+------------+
