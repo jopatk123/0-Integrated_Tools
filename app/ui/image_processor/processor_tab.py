@@ -292,10 +292,17 @@ class ProcessorTab:
                            font=("微软雅黑", 9), relief=tk.RAISED, bd=2)
         next_btn.pack(side=tk.LEFT)
         
-        delete_btn = tk.Button(nav_frame, text="🗑️ 删除", command=self.delete_image,
-                             bg=self.theme.caution_color, fg="white",
+        # 移除按钮（原删除按钮）
+        remove_btn = tk.Button(nav_frame, text="📤 移除", command=self.remove_image,
+                             bg="#FFA500", fg="white",
                              font=("微软雅黑", 9), relief=tk.RAISED, bd=2)
-        delete_btn.pack(side=tk.LEFT, padx=(20, 0))
+        remove_btn.pack(side=tk.LEFT, padx=(20, 0))
+        
+        # 删除到回收站按钮
+        delete_btn = tk.Button(nav_frame, text="🗑️ 删除", command=self.delete_image_to_recycle,
+                             bg="#DC143C", fg="white",
+                             font=("微软雅黑", 9), relief=tk.RAISED, bd=2)
+        delete_btn.pack(side=tk.LEFT, padx=(5, 0))
         
         # 图片显示区域
         canvas_frame = tk.Frame(preview_frame, bg=self.theme.bg_color)
@@ -438,25 +445,59 @@ class ProcessorTab:
             self.update_image_counter()
             self.display_current_image()
     
-    def delete_image(self):
-        """删除当前图片"""
+    def remove_image(self):
+        """从列表中移除当前图片（不删除文件）"""
         if not self.processed_images:
             return
         
-        if messagebox.askyesno("确认删除", "确定要从列表中删除当前图片吗？"):
-            del self.processed_images[self.current_image_index]
+        del self.processed_images[self.current_image_index]
+        
+        if self.processed_images:
+            if self.current_image_index >= len(self.processed_images):
+                self.current_image_index = len(self.processed_images) - 1
+            self.update_image_counter()
+            self.display_current_image()
+        else:
+            self.current_image_index = 0
+            self.update_image_counter()
+            self.canvas.delete("all")
+            if self.update_status:
+                self.update_status("已移除所有图片")
+    
+    def delete_image_to_recycle(self):
+        """删除当前图片到回收站"""
+        if not self.processed_images:
+            return
+        
+        current_image = self.processed_images[self.current_image_index]
+        image_path = current_image['path']
+        
+        try:
+            # 导入文件操作工具
+            from app.utils.file_operations import FileOperations
             
-            if self.processed_images:
-                if self.current_image_index >= len(self.processed_images):
-                    self.current_image_index = len(self.processed_images) - 1
-                self.update_image_counter()
-                self.display_current_image()
-            else:
-                self.current_image_index = 0
-                self.update_image_counter()
-                self.canvas.delete("all")
+            # 删除文件到回收站
+            if FileOperations.delete_to_recycle_bin(image_path):
+                # 从列表中移除
+                del self.processed_images[self.current_image_index]
+                
+                if self.processed_images:
+                    if self.current_image_index >= len(self.processed_images):
+                        self.current_image_index = len(self.processed_images) - 1
+                    self.update_image_counter()
+                    self.display_current_image()
+                else:
+                    self.current_image_index = 0
+                    self.update_image_counter()
+                    self.canvas.delete("all")
+                
                 if self.update_status:
-                    self.update_status("已删除所有图片")
+                    self.update_status(f"已删除图片到回收站: {os.path.basename(image_path)}")
+            else:
+                messagebox.showerror("错误", "删除图片到回收站失败")
+                
+        except Exception as e:
+            messagebox.showerror("错误", f"删除图片失败: {str(e)}")
     
     # 图片处理方法
     def resize_images(self):
